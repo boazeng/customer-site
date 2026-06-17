@@ -100,3 +100,5 @@ cd ..\backend ; uvicorn app.main:app --port 8000
 3. הוסיפו את אותו אימייל גם כמשתמש מורשה (`/auth/users`, תפקיד `user`).
 4. הלקוח מתחבר עם Google ורואה רק את הנתונים שלו.
 </content>
+
+_auto-deploy enabled via webhook → deploy.newavera.co.il (push to main)_
