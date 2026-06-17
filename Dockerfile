@@ -11,10 +11,13 @@ FROM python:3.12-slim
 WORKDIR /app
 
 COPY backend/requirements.txt ./
-# shared-auth מותקן מ-GitHub (ריפו ציבורי), tzdata לאזורי-זמן נכונים
-RUN pip install --no-cache-dir -r requirements.txt \
-    "git+https://github.com/boazeng/shared-auth.git" \
-    tzdata
+# git נדרש כדי להתקין את shared-auth מ-GitHub; מתקינים, משתמשים, ומסירים (אימג' רזה)
+RUN apt-get update && apt-get install -y --no-install-recommends git \
+ && pip install --no-cache-dir -r requirements.txt \
+        "git+https://github.com/boazeng/shared-auth.git" \
+        tzdata \
+ && apt-get purge -y git && apt-get autoremove -y \
+ && rm -rf /var/lib/apt/lists/*
 
 COPY backend/ ./backend/
 COPY --from=frontend /fe/dist ./frontend/dist
