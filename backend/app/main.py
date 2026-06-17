@@ -33,7 +33,7 @@ auth = install_auth(
         {"email": "boazen@gmail.com", "role": "admin", "name": "Boaz"},
         {"email": "yael.israel303@gmail.com", "role": "admin", "name": "Yael"},
     ],
-    public_prefixes=("/dev-login",),
+    public_prefixes=("/dev-login", "/healthz"),
 )
 
 # CORS — נחוץ רק בפיתוח כשהפרונט רץ במקור נפרד (Vite). נוסף אחרי האימות כדי שיעטוף אותו.
