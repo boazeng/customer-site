@@ -1,0 +1,11 @@
+services:
+  customer-site:
+    build: .
+    container_name: customer-site
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8094:8000"   # localhost בלבד — Cloudflare Tunnel מתחבר מקומית
+    env_file:
+      - .env
+    volumes:
+      - ./database:/app/database  # auth.db + links.db שורדים restart

@@ -62,8 +62,10 @@ def build_router(priority: PriorityClient, links: LinksStore,
         }
 
     # ---------------- חשבוניות ----------------
+    # הערה: ה-endpoints שפונים ל-Priority מוגדרים כ-def (לא async) כדי ש-Starlette
+    # יריץ אותם ב-threadpool — קריאת httpx הסינכרונית לא תחסום את לולאת האירועים.
     @router.get("/invoices")
-    async def invoices(request: Request, custname: str | None = Query(None)):
+    def invoices(request: Request, custname: str | None = Query(None)):
         cust, _acc, display, _is_admin = _resolve(request, custname, None)
         if not cust:
             raise HTTPException(400, "לא נבחר לקוח")
@@ -73,8 +75,8 @@ def build_router(priority: PriorityClient, links: LinksStore,
 
     # ---------------- כרטסת ----------------
     @router.get("/ledger")
-    async def ledger(request: Request, custname: str | None = Query(None),
-                     accname: str | None = Query(None)):
+    def ledger(request: Request, custname: str | None = Query(None),
+               accname: str | None = Query(None)):
         cust, acc, display, _is_admin = _resolve(request, custname, accname)
         if not acc:
             raise HTTPException(409, "לא-הוגדר-חשבון")
@@ -106,15 +108,15 @@ def build_router(priority: PriorityClient, links: LinksStore,
         return {"ok": True}
 
     @router.get("/admin/priority/customers", dependencies=[admin_only])
-    async def priority_customers():
+    def priority_customers():
         return {"customers": _wrap(lambda: priority.search_customers())}
 
     @router.get("/admin/priority/accounts", dependencies=[admin_only])
-    async def priority_accounts():
+    def priority_accounts():
         return {"accounts": _wrap(lambda: priority.search_accounts())}
 
     @router.get("/admin/priority/ping", dependencies=[admin_only])
-    async def priority_ping():
+    def priority_ping():
         return _wrap(lambda: priority.ping())
 
     return router
