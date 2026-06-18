@@ -45,11 +45,22 @@ class PriorityClient:
     # ---------- תשתית ----------
     def _get(self, path: str, params: dict | None = None) -> dict:
         url = f"{self.base_url}/{path.lstrip('/')}"
-        try:
-            r = httpx.get(url, params=params or {}, auth=self._auth,
-                          headers={"Accept": "application/json"}, timeout=self._timeout)
-        except httpx.HTTPError as exc:
-            raise PriorityError(f"שגיאת רשת מול Priority: {exc}", 504) from exc
+        # Accept-Encoding: identity — תשובות גדולות (PDF ב-base64) נקטעות עם chunked+gzip
+        # ("incomplete chunked read"); בלי דחיסה + ניסיון חוזר זה יציב.
+        headers = {"Accept": "application/json", "Accept-Encoding": "identity"}
+        last = None
+        for attempt in range(3):
+            try:
+                r = httpx.get(url, params=params or {}, auth=self._auth,
+                              headers=headers, timeout=self._timeout)
+                break
+            except httpx.RemoteProtocolError as exc:
+                last = exc
+                time.sleep(0.4)
+            except httpx.HTTPError as exc:
+                raise PriorityError(f"שגיאת רשת מול Priority: {exc}", 504) from exc
+        else:
+            raise PriorityError(f"שגיאת רשת מול Priority: {last}", 504)
         if r.status_code == 404:
             raise PriorityError("הרשומה לא נמצאה ב-Priority", 404)
         if r.status_code >= 400:
@@ -176,8 +187,10 @@ class PriorityClient:
                         "$select": "IVNUM",
                         "$expand": "EXTFILES_SUBFORM",
                     })
-                except PriorityError:
-                    continue
+                except PriorityError as exc:
+                    if exc.status == 404:
+                        continue  # לא בישות הזו — ננסה את הבאה
+                    raise        # שגיאת רשת/שרת אמיתית — לא לבלוע
                 for inv in d.get("value", []):
                     for f in inv.get("EXTFILES_SUBFORM", []) or []:
                         name = f.get("EXTFILENAME") or ""
