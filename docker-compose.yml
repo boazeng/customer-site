@@ -9,3 +9,13 @@ services:
       - .env
     volumes:
       - ./database:/app/database  # auth.db + links.db שורדים restart
+    networks:
+      - default
+
+networks:
+  # MTU מוקטן — תגובות גדולות מ-Priority (PDF ב-base64) נקטעו ברשת OrbStack
+  # בגלל PMTU blackhole; 1400 פותר את ה-"incomplete chunked read".
+  default:
+    driver: bridge
+    driver_opts:
+      com.docker.network.driver.mtu: "1400"
