@@ -93,3 +93,17 @@ table.data tfoot td {
   background: rgba(214,74,46,.08); border: 1px solid rgba(214,74,46,.25);
   color: #9a3115; border-radius: var(--radius-sm); padding: 12px 16px; font-size: var(--font-size-sm);
 }
+
+/* עריכה/הוספה בתוך הטבלה — תאים קומפקטיים */
+table.data td input.cell, table.data td select.cell {
+  width: 100%; min-width: 90px; font: inherit; font-size: .85rem;
+  padding: 6px 8px; border: 1px solid var(--color-border);
+  border-radius: 6px; background: var(--color-bg-white); color: var(--color-text);
+}
+table.data td input.cell:focus, table.data td select.cell:focus {
+  outline: none; border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px var(--color-primary-soft);
+}
+table.data tr.add-row td { background: var(--color-primary-soft); }
+.chk { display: inline-flex; align-items: center; gap: 5px; font-size: .82rem; white-space: nowrap; }
+.btn-sm { padding: 6px 14px; font-size: .85rem; }

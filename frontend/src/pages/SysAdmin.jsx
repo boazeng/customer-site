@@ -1,129 +1,107 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api.js'
-import TactIcon from '../components/TactIcon.jsx'
+import Admin from './Admin.jsx'
 
-// ניהול מערכת — משתמשים מורשים והתפקידים שלהם. נגיש רק ל-admin (כולל super-admin).
+// ניהול מערכת — לשוניות-משנה: ניהול משתמשי מערכת + שיוך לקוחות. נגיש רק ל-admin.
 const ROLE_HE = { admin: 'מנהל', approver: 'מאשר', user: 'משתמש / לקוח' }
 const ROLE_BADGE = { admin: 'tact-badge-on', approver: 'tact-badge-soon', user: 'tact-badge-pos' }
+const EMPTY = { name: '', email: '', role: 'user', active: true }
 
-export default function SysAdmin({ me }) {
-  const [data, setData] = useState({ users: [], roles: [] })
-  const [form, setForm] = useState({ email: '', name: '', role: 'user', active: true })
-  const [msg, setMsg] = useState('')
-  const [loading, setLoading] = useState(true)
-
-  const load = () =>
-    api.authUsers().then(setData).catch((e) => setMsg(e.message)).finally(() => setLoading(false))
-  useEffect(() => { load() }, [])
-
-  const set = (k) => (e) =>
-    setForm({ ...form, [k]: k === 'active' ? e.target.checked : e.target.value })
-
-  async function save(e) {
-    e.preventDefault(); setMsg('')
-    try {
-      await api.saveUser(form)
-      setForm({ email: '', name: '', role: 'user', active: true })
-      setMsg('נשמר בהצלחה'); load()
-    } catch (err) { setMsg(err.message) }
-  }
-
-  function edit(u) {
-    setForm({ email: u.email, name: u.name || '', role: u.role, active: !!u.active })
-  }
-
-  async function del(email) {
-    if (!confirm(`למחוק את ההרשאה של ${email}?`)) return
-    setMsg('')
-    try { await api.deleteUser(email); load() } catch (err) { setMsg(err.message) }
-  }
-
+export default function SysAdmin({ me, links, reloadLinks }) {
+  const [sub, setSub] = useState('users')
   return (
     <>
-      <div className="page-head">
-        <div>
-          <h1>ניהול מערכת</h1>
-          <div className="sub">משתמשים מורשים והתפקידים שלהם. רק מנהל (admin ומעלה) רואה מסך זה.</div>
-        </div>
+      <div className="page-head"><div><h1>ניהול מערכת</h1></div></div>
+      <div className="tact-nav" style={{ width: 'fit-content', marginBottom: 22 }}>
+        <button className={sub === 'users' ? 'active' : ''} onClick={() => setSub('users')}>ניהול משתמשי מערכת</button>
+        <button className={sub === 'links' ? 'active' : ''} onClick={() => setSub('links')}>שיוך לקוחות</button>
       </div>
-
-      <div className="kpi-row">
-        <Kpi label="סה״כ משתמשים" value={data.users.length} />
-        <Kpi label="מנהלים" value={data.users.filter((u) => u.role === 'admin' && u.active).length} />
-        <Kpi label="פעילים" value={data.users.filter((u) => u.active).length} />
-      </div>
-
-      <div className="admin-grid">
-        <form className="form-card" onSubmit={save}>
-          <h3><TactIcon name="users" size={18} /> הוספה / עריכת משתמש</h3>
-          <div className="notice" style={{ marginBottom: 14 }}>
-            <b>תפקידים:</b> <b>מנהל</b> — גישה מלאה (כולל מסך זה). <b>מאשר</b> / <b>משתמש</b> — לקוח רגיל
-            שרואה רק את הנתונים המשויכים אליו.
-          </div>
-          <div className="field">
-            <label>אימייל (חשבון Google)</label>
-            <input type="email" value={form.email} onChange={set('email')}
-              placeholder="user@gmail.com" required />
-          </div>
-          <div className="field">
-            <label>שם לתצוגה</label>
-            <input value={form.name} onChange={set('name')} placeholder="שם המשתמש" />
-          </div>
-          <div className="field">
-            <label>תפקיד</label>
-            <select value={form.role} onChange={set('role')}>
-              {(data.roles.length ? data.roles : ['admin', 'approver', 'user']).map((r) => (
-                <option key={r} value={r}>{ROLE_HE[r] || r}</option>
-              ))}
-            </select>
-          </div>
-          <div className="field" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <input id="active" type="checkbox" checked={form.active} onChange={set('active')}
-              style={{ width: 'auto' }} />
-            <label htmlFor="active" style={{ margin: 0 }}>פעיל</label>
-          </div>
-          <button className="tact-btn tact-btn-primary" type="submit">שמירה</button>
-          {msg && <span style={{ marginRight: 12 }} className="sub">{msg}</span>}
-        </form>
-
-        <div className="tbl-wrap">
-          {loading ? (
-            <div className="state"><div className="spinner" />טוען…</div>
-          ) : (
-            <table className="data">
-              <thead>
-                <tr><th>אימייל</th><th>שם</th><th>תפקיד</th><th>סטטוס</th><th>כניסה אחרונה</th><th></th></tr>
-              </thead>
-              <tbody>
-                {data.users.map((u) => (
-                  <tr key={u.email}>
-                    <td>{u.email}{u.email === me?.email && <span className="muted"> (אתה)</span>}</td>
-                    <td>{u.name}</td>
-                    <td><span className={'tact-badge ' + (ROLE_BADGE[u.role] || 'tact-badge-soon')}>{ROLE_HE[u.role] || u.role}</span></td>
-                    <td>{u.active ? <span className="pos">פעיל</span> : <span className="neg">מושבת</span>}</td>
-                    <td className="num muted">{(u.last_login_at || '').slice(0, 10) || '—'}</td>
-                    <td>
-                      <div className="row-actions">
-                        <button className="link-del" style={{ color: 'var(--color-primary)' }} onClick={() => edit(u)}>עריכה</button>
-                        <button className="link-del" onClick={() => del(u.email)}>מחיקה</button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
-      </div>
+      {sub === 'users'
+        ? <ManageUsers me={me} />
+        : <Admin links={links} reload={reloadLinks} />}
     </>
   )
 }
 
-function Kpi({ label, value }) {
+function ManageUsers({ me }) {
+  const [users, setUsers] = useState([])
+  const [roles, setRoles] = useState(['admin', 'approver', 'user'])
+  const [draft, setDraft] = useState(EMPTY)        // שורת ההוספה
+  const [editEmail, setEditEmail] = useState('')   // איזו שורה בעריכה
+  const [edit, setEdit] = useState(EMPTY)
+  const [msg, setMsg] = useState('')
+
+  const load = () => api.authUsers()
+    .then((d) => { setUsers(d.users || []); if (d.roles?.length) setRoles(d.roles) })
+    .catch((e) => setMsg(e.message))
+  useEffect(() => { load() }, [])
+
+  async function add() {
+    setMsg('')
+    if (!draft.email) { setMsg('חסר אימייל'); return }
+    try { await api.saveUser(draft); setDraft(EMPTY); load() } catch (e) { setMsg(e.message) }
+  }
+  async function saveEdit() {
+    setMsg('')
+    try { await api.saveUser(edit); setEditEmail(''); load() } catch (e) { setMsg(e.message) }
+  }
+  async function del(email) {
+    if (!confirm(`למחוק את ${email}?`)) return
+    setMsg('')
+    try { await api.deleteUser(email); load() } catch (e) { setMsg(e.message) }
+  }
+
+  const roleOpts = roles.map((r) => <option key={r} value={r}>{ROLE_HE[r] || r}</option>)
+  const Active = ({ v, on }) => (
+    <label className="chk"><input type="checkbox" checked={v} onChange={(e) => on(e.target.checked)} /> פעיל</label>
+  )
+
   return (
-    <div className="tact-kpi">
-      <div className="tact-kpi-label">{label}</div>
-      <div className="tact-kpi-val">{value}</div>
+    <div className="tbl-wrap">
+      <table className="data">
+        <thead>
+          <tr><th>שם</th><th>אימייל</th><th>תפקיד</th><th>סטטוס</th><th>כניסה אחרונה</th><th></th></tr>
+        </thead>
+        <tbody>
+          {/* שורת הוספה — חלק מהטבלה */}
+          <tr className="add-row">
+            <td><input className="cell" value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} placeholder="שם" /></td>
+            <td><input className="cell" type="email" value={draft.email} onChange={(e) => setDraft({ ...draft, email: e.target.value })} placeholder="email@gmail.com" /></td>
+            <td><select className="cell" value={draft.role} onChange={(e) => setDraft({ ...draft, role: e.target.value })}>{roleOpts}</select></td>
+            <td><Active v={draft.active} on={(v) => setDraft({ ...draft, active: v })} /></td>
+            <td className="muted">—</td>
+            <td><button className="tact-btn tact-btn-primary btn-sm" onClick={add}>+ הוסף</button></td>
+          </tr>
+
+          {users.map((u) => editEmail === u.email ? (
+            <tr key={u.email}>
+              <td><input className="cell" value={edit.name} onChange={(e) => setEdit({ ...edit, name: e.target.value })} placeholder="שם" /></td>
+              <td className="muted">{u.email}</td>
+              <td><select className="cell" value={edit.role} onChange={(e) => setEdit({ ...edit, role: e.target.value })}>{roleOpts}</select></td>
+              <td><Active v={edit.active} on={(v) => setEdit({ ...edit, active: v })} /></td>
+              <td className="num muted">{(u.last_login_at || '').slice(0, 10) || '—'}</td>
+              <td><div className="row-actions">
+                <button className="link-del" style={{ color: 'var(--color-pos)' }} onClick={saveEdit}>שמור</button>
+                <button className="link-del muted" onClick={() => setEditEmail('')}>בטל</button>
+              </div></td>
+            </tr>
+          ) : (
+            <tr key={u.email}>
+              <td>{u.name}{u.email === me?.email && <span className="muted"> (אתה)</span>}</td>
+              <td>{u.email}</td>
+              <td><span className={'tact-badge ' + (ROLE_BADGE[u.role] || 'tact-badge-soon')}>{ROLE_HE[u.role] || u.role}</span></td>
+              <td>{u.active ? <span className="pos">פעיל</span> : <span className="neg">מושבת</span>}</td>
+              <td className="num muted">{(u.last_login_at || '').slice(0, 10) || '—'}</td>
+              <td><div className="row-actions">
+                <button className="link-del" style={{ color: 'var(--color-primary)' }}
+                  onClick={() => { setEditEmail(u.email); setEdit({ name: u.name || '', email: u.email, role: u.role, active: !!u.active }) }}>עריכה</button>
+                <button className="link-del" onClick={() => del(u.email)}>מחק</button>
+              </div></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      {msg && <div className="sub" style={{ padding: '10px 16px' }}>{msg}</div>}
     </div>
   )
 }

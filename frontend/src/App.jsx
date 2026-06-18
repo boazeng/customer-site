@@ -3,7 +3,6 @@ import { api } from './api.js'
 import Header from './components/Header.jsx'
 import Invoices from './pages/Invoices.jsx'
 import Ledger from './pages/Ledger.jsx'
-import Admin from './pages/Admin.jsx'
 import SysAdmin from './pages/SysAdmin.jsx'
 
 export default function App() {
@@ -51,12 +50,8 @@ export default function App() {
       <main className="content">
         <div className="container">
           {view === 'sysadmin' && me.is_admin && (
-            <>
-              <SysAdmin me={me} />
-              <div style={{ marginTop: 44 }}>
-                <Admin links={links} reload={() => api.adminLinks().then((d) => setLinks(d.links))} />
-              </div>
-            </>
+            <SysAdmin me={me} links={links}
+              reloadLinks={() => api.adminLinks().then((d) => setLinks(d.links))} />
           )}
           {(view === 'invoices' || view === 'ledger') && (
             <ActiveView view={view} ctx={ctx} isAdmin={me.is_admin} />
