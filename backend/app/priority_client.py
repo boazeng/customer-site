@@ -100,6 +100,9 @@ class PriorityClient:
             "owner": r.get("OWNERLOGIN"),
         }
 
+    # תיאור סוג חשבונית (IVTYPE). ברירת-מחדל: הקוד הגולמי.
+    _IVTYPE_DESC = {"A": "חשבונית מס", "C": "חשבונית זיכוי", "F": "חשבונית מס/קבלה"}
+
     # ---------- חשבוניות ----------
     def get_invoices(self, custname: str) -> list[dict]:
         def run():
@@ -112,7 +115,7 @@ class PriorityClient:
             return [{
                 "ivnum": r.get("IVNUM"),
                 "date": (r.get("IVDATE") or "")[:10],
-                "type": r.get("IVTYPE"),
+                "type": self._IVTYPE_DESC.get(r.get("IVTYPE"), r.get("IVTYPE") or ""),
                 "status": r.get("STATDES"),
                 "before_vat": _num(r.get("QPRICE")),
                 "vat": _num(r.get("VAT")),
@@ -178,6 +181,7 @@ class PriorityClient:
                 "date": (r.get("FNCDATE") or "")[:10],
                 "ivnum": r.get("IVNUM"),
                 "fncnum": r.get("FNCNUM"),
+                "type": r.get("FNCPATNAME") or "",   # סוג תנועה (תבנית התנועה)
                 "details": r.get("DETAILS") or r.get("FNCPATNAME") or "",
                 "debit": debit,
                 "credit": credit,

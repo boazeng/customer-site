@@ -64,7 +64,7 @@ function BranchLedger({ b, cust }) {
         <table className="data">
           <thead>
             <tr>
-              <th>תאריך</th><th>אסמכתא</th><th>פרטים</th>
+              <th>תאריך</th><th>אסמכתא</th><th>סוג תנועה</th><th>פרטים</th>
               <th className="num">חובה</th><th className="num">זכות</th><th className="num">יתרה</th>
             </tr>
           </thead>
@@ -73,6 +73,7 @@ function BranchLedger({ b, cust }) {
               <tr key={`${l.fncnum}-${i}`}>
                 <td className="num">{fmtDate(l.date)}</td>
                 <td>{l.ivnum || l.fncnum}</td>
+                <td>{l.type}</td>
                 <td className="muted">{l.details}</td>
                 <td className="num">{l.debit ? fmtMoney(l.debit) : ''}</td>
                 <td className="num">{l.credit ? fmtMoney(l.credit) : ''}</td>
@@ -82,7 +83,7 @@ function BranchLedger({ b, cust }) {
           </tbody>
           <tfoot>
             <tr>
-              <td colSpan={3}>סה"כ</td>
+              <td colSpan={4}>סה"כ</td>
               <td className="num">{fmtMoney(b.total_debit)}</td>
               <td className="num">{fmtMoney(b.total_credit)}</td>
               <td className={'num ' + (b.balance < 0 ? 'neg' : 'pos')}>₪{fmtMoney(b.balance)}</td>

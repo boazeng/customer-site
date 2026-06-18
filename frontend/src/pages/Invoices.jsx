@@ -40,7 +40,7 @@ export default function Invoices({ ctx }) {
           <table className="data">
             <thead>
               <tr>
-                <th>תאריך</th><th>מספר חשבונית</th><th>פרטים</th><th>סטטוס</th>
+                <th>תאריך</th><th>מספר חשבונית</th><th>סוג תנועה</th><th>פרטים</th><th>סטטוס</th>
                 <th className="num">לפני מע"מ</th><th className="num">מע"מ</th><th className="num">סה"כ</th>
               </tr>
             </thead>
@@ -49,6 +49,7 @@ export default function Invoices({ ctx }) {
                 <tr key={`${r.ivnum}-${r.fncnum}`}>
                   <td className="num">{fmtDate(r.date)}</td>
                   <td>{r.ivnum}</td>
+                  <td>{r.type}</td>
                   <td className="muted">{r.details}</td>
                   <td>{r.status}</td>
                   <td className="num">{fmtMoney(r.before_vat)}</td>
@@ -59,7 +60,7 @@ export default function Invoices({ ctx }) {
             </tbody>
             <tfoot>
               <tr>
-                <td colSpan={6}>סה"כ</td>
+                <td colSpan={7}>סה"כ</td>
                 <td className="num">₪{fmtMoney(data?.total)}</td>
               </tr>
             </tfoot>
