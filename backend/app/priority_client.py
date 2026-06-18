@@ -169,20 +169,46 @@ class PriorityClient:
     # ב-Priority ה-PDF הרשמי ("מסמך ממוחשב") נשמר ב-EXTFILES_SUBFORM, כאשר השדה
     # EXTFILENAME מכיל data:application/pdf;base64,<...>. שולפים, מפענחים, ומחזירים bytes.
     def get_invoice_pdf(self, custname: str, ivnum: str, source: str | None = None):
-        """מחזיר (pdf_bytes, filename) לחשבונית של הלקוח. מסונן לפי CUSTNAME (אבטחה)."""
+        """מחזיר (pdf_bytes, filename) לחשבונית של הלקוח. מסונן לפי CUSTNAME (אבטחה).
+
+        שרת Priority נוטה לקטוע תשובות גדולות (ה-PDF ב-base64) — 'incomplete chunked
+        read'. לכן: ניסיונות חוזרים עם backoff, ומטמון קבוע (חשבונית אינה משתנה).
+        """
         import base64
         custname = (custname or "").strip()
         ivnum = (ivnum or "").strip()
         if not custname or not ivnum:
             raise PriorityError("חסר מספר חשבונית או לקוח", 400)
+
+        pdf_cache = self.__dict__.setdefault("_pdf_cache", {})
+        ckey = f"{source}:{custname}:{ivnum}"
+        if ckey in pdf_cache:
+            return pdf_cache[ckey]
+
         entities = ([source] if source in self._INVOICE_ENTITIES
                     else list(self._INVOICE_ENTITIES))
 
-        def run():
+        def extract(d):
+            for inv in d.get("value", []):
+                if (inv.get("CUSTNAME") or "").strip() != custname:
+                    continue  # אבטחה — רק חשבונית של הלקוח המבוקש
+                for f in inv.get("EXTFILES_SUBFORM", []) or []:
+                    name = f.get("EXTFILENAME") or ""
+                    if name.startswith("data:application/pdf") and "," in name:
+                        try:
+                            pdf = base64.b64decode(name.split(",", 1)[1])
+                        except (ValueError, TypeError):
+                            continue
+                        if pdf[:4] == b"%PDF":
+                            return pdf
+            return None
+
+        # עד 5 ניסיונות על קטיעת-רשת (504/502), עם השהייה קצרה גוברת בין ניסיונות.
+        last_err = None
+        for attempt in range(5):
+            found_invoice = False
             for entity in entities:
                 try:
-                    # סינון לפי IVNUM בלבד — סינון משולב (IVNUM and CUSTNAME) יחד עם
-                    # $expand שובר את התגובה ב-Priority (נקטעת). מאמתים CUSTNAME בקוד.
                     d = self._get(entity, {
                         "$filter": f"IVNUM eq '{self._q(ivnum)}'",
                         "$select": "IVNUM,CUSTNAME",
@@ -190,21 +216,24 @@ class PriorityClient:
                     })
                 except PriorityError as exc:
                     if exc.status == 404:
-                        continue  # לא בישות הזו — ננסה את הבאה
-                    raise        # שגיאת רשת/שרת אמיתית — לא לבלוע
-                for inv in d.get("value", []):
-                    if (inv.get("CUSTNAME") or "").strip() != custname:
-                        continue  # אבטחה — רק חשבונית של הלקוח המבוקש
-                    for f in inv.get("EXTFILES_SUBFORM", []) or []:
-                        name = f.get("EXTFILENAME") or ""
-                        if name.startswith("data:application/pdf") and "," in name:
-                            try:
-                                pdf = base64.b64decode(name.split(",", 1)[1])
-                            except (ValueError, TypeError):
-                                continue
-                            if pdf[:4] == b"%PDF":
-                                return pdf, f"invoice-{ivnum}.pdf"
-            raise PriorityError("לא נמצא קובץ PDF לחשבונית זו", 404)
+                        continue          # לא בישות הזו — ננסה את הבאה
+                    if exc.status in (502, 504):
+                        last_err = exc     # קטיעת רשת — ננסה שוב (backoff)
+                        break
+                    raise
+                found_invoice = True
+                pdf = extract(d)
+                if pdf:
+                    result = (pdf, f"invoice-{ivnum}.pdf")
+                    pdf_cache[ckey] = result
+                    return result
+            else:
+                # עברנו על כל הישויות ללא קטיעת-רשת — אין PDF
+                if found_invoice or not last_err:
+                    raise PriorityError("לא נמצא קובץ PDF לחשבונית זו", 404)
+            time.sleep(0.3 * (attempt + 1))
+
+        raise (last_err or PriorityError("לא נמצא קובץ PDF לחשבונית זו", 404))
         return self._cached(f"pdf:{source}:{custname}:{ivnum}", run)
 
     # ---------- פרטי לקוח ----------
