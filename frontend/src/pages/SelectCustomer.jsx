@@ -27,36 +27,27 @@ export default function SelectCustomer() {
 
   return (
     <>
-      <div className="page-head">
-        <div>
-          <h1>בחירת לקוח</h1>
-          <div className="sub">איתור לקוח ב-Priority לפי כתובת מייל או לפי מספר לקוח, והצגת פרטיו.</div>
-        </div>
-      </div>
-
-      <form className="form-card" onSubmit={search} style={{ marginBottom: 22 }}>
-        <div className="tact-nav" style={{ width: 'fit-content', marginBottom: 16 }}>
+      <form onSubmit={search} style={{ marginBottom: 18 }}>
+        <div className="tact-nav" style={{ width: 'fit-content', marginBottom: 12 }}>
           <button type="button" className={mode === 'email' ? 'active' : ''}
             onClick={() => { setMode('email'); setValue(''); setResult(null); setErr('') }}>לפי מייל</button>
           <button type="button" className={mode === 'custname' ? 'active' : ''}
             onClick={() => { setMode('custname'); setValue(''); setResult(null); setErr('') }}>לפי מספר לקוח</button>
         </div>
 
-        <div className="field">
-          <label>{mode === 'email' ? 'כתובת מייל של הלקוח' : 'מספר לקוח (custname)'}</label>
-          <div style={{ display: 'flex', gap: 10 }}>
-            <input
-              type={mode === 'email' ? 'email' : 'text'}
-              value={value}
-              onChange={(e) => setValue(e.target.value)}
-              placeholder={mode === 'email' ? 'customer@example.com' : 'לדוגמה: 50003'}
-              style={{ flex: 1 }}
-              autoFocus
-            />
-            <button className="tact-btn tact-btn-primary" type="submit" disabled={loading || !value.trim()}>
-              {loading ? 'מחפש…' : 'איתור'}
-            </button>
-          </div>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          <input
+            type={mode === 'email' ? 'email' : 'text'}
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            placeholder={mode === 'email' ? 'customer@example.com' : 'לדוגמה: 50003'}
+            style={{ width: 320, maxWidth: '100%', fontSize: '1.15rem', padding: '10px 14px' }}
+            autoFocus
+          />
+          <button className="tact-btn tact-btn-primary" type="submit" disabled={loading || !value.trim()}
+            style={{ fontSize: '1.05rem' }}>
+            {loading ? 'מחפש…' : 'איתור'}
+          </button>
         </div>
         {err && <div className="sub neg" style={{ marginTop: 8 }}>{err}</div>}
       </form>
@@ -72,7 +63,7 @@ export default function SelectCustomer() {
       )}
 
       {!loading && result?.customers?.length > 0 && (
-        <div className="admin-grid">
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16 }}>
           {result.customers.map((c) => <CustomerCard key={c.custname} c={c} />)}
         </div>
       )}
@@ -95,18 +86,19 @@ function CustomerCard({ c }) {
   ].filter(([, v]) => v)
 
   return (
-    <div className="tact-card">
-      <div className="tact-card-cap">
-        <h3 style={{ margin: 0 }}>{c.name || c.custname}</h3>
+    <div className="tact-card" style={{ width: 'fit-content', minWidth: 340 }}>
+      <div className="tact-card-cap" style={{ padding: '12px 16px' }}>
+        <h3 style={{ margin: 0, fontSize: '1.2rem' }}>{c.name || c.custname}</h3>
         <div className="tact-card-ico"><TactIcon name="clients" size={18} /></div>
       </div>
-      <div className="tact-card-body">
-        <table className="data">
+      <div className="tact-card-body" style={{ padding: '6px 16px 12px' }}>
+        <table style={{ borderCollapse: 'collapse', fontSize: '1.05rem' }}>
           <tbody>
             {rows.map(([k, v]) => (
               <tr key={k}>
-                <th style={{ textAlign: 'right', whiteSpace: 'nowrap', width: '40%' }}>{k}</th>
-                <td>{v}</td>
+                <th style={{ textAlign: 'right', whiteSpace: 'nowrap', padding: '5px 0',
+                  color: 'var(--color-accent)', fontWeight: 600, verticalAlign: 'top' }}>{k}</th>
+                <td style={{ padding: '5px 0 5px 18px', fontWeight: 500 }}>{v}</td>
               </tr>
             ))}
           </tbody>
