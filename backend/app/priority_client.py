@@ -235,15 +235,16 @@ class PriorityClient:
         def run():
             accounts = self.list_receivable_accounts(custname)
             companies = self.get_companies()
-            # מציגים סניפים פעילים (יתרה ≠ 0). אם הכל אפס — נציג את חשבון הבסיס.
-            active = [a for a in accounts if a["balance"] != 0]
-            if not active:
-                base = next((a for a in accounts if a["branch"] == ""), None)
-                active = [base] if base else accounts[:1]
-                active = [a for a in active if a]
+            # שולפים את הכרטסת של כל חשבונות הלקוח במקביל (יתרה אפס לא אומרת שאין
+            # תנועות — סניף יכול להתקזז ל-0), ומציגים רק חשבונות עם תנועות בפועל.
+            from concurrent.futures import ThreadPoolExecutor
+            with ThreadPoolExecutor(max_workers=8) as pool:
+                ledgers = list(pool.map(
+                    lambda a: (a, self._account_ledger(a["accname"])), accounts))
             branches = []
-            for a in active:
-                led = self._account_ledger(a["accname"])
+            for a, led in ledgers:
+                if not led["lines"]:
+                    continue  # אין תנועות — לא מציגים
                 branches.append({
                     "accname": a["accname"],
                     "branch": a["branch"],
@@ -254,6 +255,7 @@ class PriorityClient:
                     "total_credit": led["total_credit"],
                     "balance": led["balance"],
                 })
+            branches.sort(key=lambda b: b["accname"])
             return {
                 "custname": custname,
                 "branches": branches,
