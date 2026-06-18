@@ -7,7 +7,7 @@ const ROLE_HE = { admin: 'מנהל', approver: 'מאשר', user: 'משתמש / �
 const ROLE_BADGE = { admin: 'tact-badge-on', approver: 'tact-badge-soon', user: 'tact-badge-pos' }
 const EMPTY = { name: '', email: '', role: 'user', active: true }
 
-export default function SysAdmin({ me }) {
+export default function SysAdmin({ me, active, onSelectCustomer }) {
   const [sub, setSub] = useState('users')
   return (
     <>
@@ -18,7 +18,7 @@ export default function SysAdmin({ me }) {
       </div>
       {sub === 'users'
         ? <ManageUsers me={me} />
-        : <SelectCustomer />}
+        : <SelectCustomer active={active} onSelectCustomer={onSelectCustomer} />}
     </>
   )
 }

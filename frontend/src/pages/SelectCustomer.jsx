@@ -3,7 +3,7 @@ import { api } from '../api.js'
 import TactIcon from '../components/TactIcon.jsx'
 
 // בחירת לקוח: איתור לפי מייל או לפי מספר לקוח מתוך Priority, והצגת פרטי הלקוח.
-export default function SelectCustomer() {
+export default function SelectCustomer({ active, onSelectCustomer }) {
   const [mode, setMode] = useState('email')   // 'email' | 'custname'
   const [value, setValue] = useState('')
   const [loading, setLoading] = useState(false)
@@ -64,14 +64,18 @@ export default function SelectCustomer() {
 
       {!loading && result?.customers?.length > 0 && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16 }}>
-          {result.customers.map((c) => <CustomerCard key={c.custname} c={c} />)}
+          {result.customers.map((c) => (
+            <CustomerCard key={c.custname} c={c}
+              isActive={active?.custname === c.custname}
+              onSelect={() => onSelectCustomer?.(c)} />
+          ))}
         </div>
       )}
     </>
   )
 }
 
-function CustomerCard({ c }) {
+function CustomerCard({ c, isActive, onSelect }) {
   const rows = [
     ['מספר לקוח', c.custname],
     ['שם', c.name],
@@ -91,7 +95,7 @@ function CustomerCard({ c }) {
         <h3 style={{ margin: 0, fontSize: '1.2rem' }}>{c.name || c.custname}</h3>
         <div className="tact-card-ico"><TactIcon name="clients" size={18} /></div>
       </div>
-      <div className="tact-card-body" style={{ padding: '6px 16px 12px' }}>
+      <div className="tact-card-body" style={{ padding: '6px 16px 14px' }}>
         <table style={{ borderCollapse: 'collapse', fontSize: '1.05rem' }}>
           <tbody>
             {rows.map(([k, v]) => (
@@ -103,6 +107,15 @@ function CustomerCard({ c }) {
             ))}
           </tbody>
         </table>
+        <div style={{ marginTop: 14 }}>
+          {isActive ? (
+            <span className="tact-badge tact-badge-pos" style={{ fontSize: '.95rem' }}>✓ הלקוח הפעיל</span>
+          ) : (
+            <button className="tact-btn tact-btn-primary" onClick={onSelect} style={{ width: '100%' }}>
+              הצג נתונים עבור לקוח זה
+            </button>
+          )}
+        </div>
       </div>
     </div>
   )

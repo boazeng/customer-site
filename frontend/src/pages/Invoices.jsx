@@ -24,7 +24,7 @@ export default function Invoices({ ctx }) {
       <div className="page-head">
         <div>
           <h1>חשבוניות</h1>
-          <div className="sub">{data?.display_name} · {rows.length} חשבוניות</div>
+          <div className="sub">{ctx.display_name || data?.display_name} · {rows.length} חשבוניות</div>
         </div>
       </div>
 

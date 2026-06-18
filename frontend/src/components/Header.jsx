@@ -7,7 +7,7 @@ const TABS = [
   { key: 'ledger', label: 'כרטסת', icon: 'reports' },
 ]
 
-export default function Header({ me, view, setView, customers, selected, setSelected }) {
+export default function Header({ me, view, setView, active }) {
   return (
     <header className="tact-bar topbar">
       <div className="topbar-side">
@@ -40,17 +40,10 @@ export default function Header({ me, view, setView, customers, selected, setSele
       </div>
 
       <div className="topbar-side">
-        {me?.is_admin && (view === 'invoices' || view === 'ledger') && (
-          <div className="cust-picker">
+        {me?.is_admin && active && (
+          <div className="cust-active" title="הלקוח הפעיל — נקבע במסך בחירת לקוח">
             <TactIcon name="clients" size={16} />
-            <select value={selected || ''} onChange={(e) => setSelected(e.target.value)}>
-              <option value="">— בחר לקוח —</option>
-              {customers.map((c) => (
-                <option key={c.email} value={c.email}>
-                  {c.display_name || c.custname} ({c.custname})
-                </option>
-              ))}
-            </select>
+            <span><b>{active.name}</b> · {active.custname}</span>
           </div>
         )}
         <span className="who">

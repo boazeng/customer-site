@@ -38,7 +38,7 @@ export default function Ledger({ ctx, isAdmin }) {
         <div>
           <h1>כרטסת</h1>
           <div className="sub">
-            {data?.display_name} · חשבון {data?.account} {data?.account_desc ? `— ${data.account_desc}` : ''}
+            {ctx.display_name || data?.display_name} · חשבון {data?.account} {data?.account_desc ? `— ${data.account_desc}` : ''}
           </div>
         </div>
       </div>
