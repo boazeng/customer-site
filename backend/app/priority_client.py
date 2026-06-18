@@ -181,10 +181,11 @@ class PriorityClient:
         def run():
             for entity in entities:
                 try:
+                    # סינון לפי IVNUM בלבד — סינון משולב (IVNUM and CUSTNAME) יחד עם
+                    # $expand שובר את התגובה ב-Priority (נקטעת). מאמתים CUSTNAME בקוד.
                     d = self._get(entity, {
-                        "$filter": (f"IVNUM eq '{self._q(ivnum)}' and "
-                                    f"CUSTNAME eq '{self._q(custname)}'"),
-                        "$select": "IVNUM",
+                        "$filter": f"IVNUM eq '{self._q(ivnum)}'",
+                        "$select": "IVNUM,CUSTNAME",
                         "$expand": "EXTFILES_SUBFORM",
                     })
                 except PriorityError as exc:
@@ -192,6 +193,8 @@ class PriorityClient:
                         continue  # לא בישות הזו — ננסה את הבאה
                     raise        # שגיאת רשת/שרת אמיתית — לא לבלוע
                 for inv in d.get("value", []):
+                    if (inv.get("CUSTNAME") or "").strip() != custname:
+                        continue  # אבטחה — רק חשבונית של הלקוח המבוקש
                     for f in inv.get("EXTFILES_SUBFORM", []) or []:
                         name = f.get("EXTFILENAME") or ""
                         if name.startswith("data:application/pdf") and "," in name:
