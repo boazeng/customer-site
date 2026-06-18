@@ -50,11 +50,6 @@ export default function Invoices({ ctx }) {
         </div>
       </div>
 
-      <div className="kpi-row">
-        <Kpi label="מספר חשבוניות" value={rows.length} />
-        <Kpi label='סה"כ כולל מע"מ' value={`₪${fmtMoney(data?.total)}`} />
-      </div>
-
       {rows.length === 0 ? (
         <div className="state"><p>לא נמצאו חשבוניות ללקוח זה.</p></div>
       ) : (
