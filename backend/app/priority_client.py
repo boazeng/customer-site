@@ -100,29 +100,45 @@ class PriorityClient:
             "owner": r.get("OWNERLOGIN"),
         }
 
-    # תיאור סוג חשבונית (IVTYPE). ברירת-מחדל: הקוד הגולמי.
-    _IVTYPE_DESC = {"A": "חשבונית מס", "C": "חשבונית זיכוי", "F": "חשבונית מס/קבלה"}
+    # מקורות חשבוניות הלקוח: כל סוג חשבונית יושב בישות נפרדת ב-Priority.
+    #   AINVOICES=חשבונית מס · EINVOICES=חשבונית מס קבלה · CINVOICES=חשבונית לקוח מרכזת
+    _INVOICE_SOURCES = [
+        ("AINVOICES", "חשבונית מס"),
+        ("EINVOICES", "חשבונית מס קבלה"),
+        ("CINVOICES", "חשבונית לקוח מרכזת"),
+    ]
 
     # ---------- חשבוניות ----------
     def get_invoices(self, custname: str) -> list[dict]:
-        def run():
-            data = self._get("AINVOICES", {
-                "$filter": f"CUSTNAME eq '{self._q(custname)}'",
-                "$select": "IVNUM,IVDATE,IVTYPE,STATDES,QPRICE,VAT,TOTPRICE,DETAILS,CDES,FNCNUM",
-                "$orderby": "IVDATE desc",
-            })
-            rows = data.get("value", [])
+        custname = (custname or "").strip()
+
+        def fetch(entity: str, label: str) -> list[dict]:
+            try:
+                data = self._get(entity, {
+                    "$filter": f"CUSTNAME eq '{self._q(custname)}'",
+                    "$select": "IVNUM,IVDATE,STATDES,QPRICE,VAT,TOTPRICE,DETAILS",
+                    "$orderby": "IVDATE desc",
+                })
+            except PriorityError:
+                return []  # ישות לא זמינה/חסומה — מדלגים, לא מפילים את כל הרשימה
             return [{
                 "ivnum": r.get("IVNUM"),
                 "date": (r.get("IVDATE") or "")[:10],
-                "type": self._IVTYPE_DESC.get(r.get("IVTYPE"), r.get("IVTYPE") or ""),
+                "type": label,
                 "status": r.get("STATDES"),
                 "before_vat": _num(r.get("QPRICE")),
                 "vat": _num(r.get("VAT")),
                 "total": _num(r.get("TOTPRICE")),
                 "details": r.get("DETAILS") or "",
-                "fncnum": r.get("FNCNUM"),
-            } for r in rows]
+            } for r in data.get("value", [])]
+
+        def run():
+            from concurrent.futures import ThreadPoolExecutor
+            with ThreadPoolExecutor(max_workers=len(self._INVOICE_SOURCES)) as pool:
+                parts = pool.map(lambda s: fetch(*s), self._INVOICE_SOURCES)
+            rows = [r for part in parts for r in part]
+            rows.sort(key=lambda r: r["date"], reverse=True)
+            return rows
         return self._cached(f"inv:{custname}", run)
 
     # ---------- פרטי לקוח ----------
