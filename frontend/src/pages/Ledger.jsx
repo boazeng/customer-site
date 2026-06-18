@@ -1,6 +1,14 @@
 import { useEffect, useState } from 'react'
 import { api, fmtMoney, fmtDate } from '../api.js'
-import { Kpi, Loading } from './Invoices.jsx'
+import { Loading } from './Invoices.jsx'
+
+// קודי סוג-תנועה (FNCPATNAME) → שם מלא. בכרטסת משאירים את הקיצור ומציגים שם מלא ב-tooltip.
+const TXN_TYPE = {
+  'חל': 'חשבונית מס',
+  'חק': 'חשבונית מס קבלה',
+  'חלמ': 'חשבונית לקוח מרכזת',
+  'חלז': 'חשבונית זיכוי',
+}
 
 export default function Ledger({ ctx }) {
   const [data, setData] = useState(null)
@@ -28,11 +36,6 @@ export default function Ledger({ ctx }) {
             {ctx.display_name || data?.display_name} · {branches.length} {branches.length === 1 ? 'סניף' : 'סניפים'}
           </div>
         </div>
-      </div>
-
-      <div className="kpi-row">
-        <Kpi label="מספר סניפים" value={branches.length} />
-        <Kpi label="יתרה כוללת" value={`₪${fmtMoney(data?.balance)}`} />
       </div>
 
       {branches.length === 0 ? (
@@ -73,7 +76,7 @@ function BranchLedger({ b, cust }) {
               <tr key={`${l.fncnum}-${i}`}>
                 <td className="num">{fmtDate(l.date)}</td>
                 <td>{l.ivnum || l.fncnum}</td>
-                <td>{l.type}</td>
+                <td title={TXN_TYPE[l.type] || ''}>{l.type}</td>
                 <td className="muted">{l.details}</td>
                 <td className="num">{l.debit ? fmtMoney(l.debit) : ''}</td>
                 <td className="num">{l.credit ? fmtMoney(l.credit) : ''}</td>
