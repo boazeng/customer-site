@@ -43,6 +43,13 @@ export const api = {
   deleteLink: (email) => post('/api/admin/links/delete', { email }),
   priorityCustomers: () => req('/api/admin/priority/customers'),
   priorityAccounts: () => req('/api/admin/priority/accounts'),
+  // איתור לקוח ב-Priority לפי מייל או מספר לקוח
+  customerLookup: ({ email, custname }) => {
+    const p = new URLSearchParams()
+    if (email) p.set('email', email)
+    if (custname) p.set('custname', custname)
+    return req('/api/admin/priority/customer-lookup?' + p.toString())
+  },
   // ניהול מערכת — משתמשים מורשים ותפקידים (shared-auth)
   authUsers: () => req('/auth/users'),
   saveUser: (body) => post('/auth/users', body),

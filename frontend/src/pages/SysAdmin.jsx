@@ -1,24 +1,24 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api.js'
-import Admin from './Admin.jsx'
+import SelectCustomer from './SelectCustomer.jsx'
 
-// ניהול מערכת — לשוניות-משנה: ניהול משתמשי מערכת + שיוך לקוחות. נגיש רק ל-admin.
+// ניהול מערכת — לשוניות-משנה: ניהול משתמשי מערכת + בחירת לקוח. נגיש רק ל-admin.
 const ROLE_HE = { admin: 'מנהל', approver: 'מאשר', user: 'משתמש / לקוח' }
 const ROLE_BADGE = { admin: 'tact-badge-on', approver: 'tact-badge-soon', user: 'tact-badge-pos' }
 const EMPTY = { name: '', email: '', role: 'user', active: true }
 
-export default function SysAdmin({ me, links, reloadLinks }) {
+export default function SysAdmin({ me }) {
   const [sub, setSub] = useState('users')
   return (
     <>
       <div className="page-head"><div><h1>ניהול מערכת</h1></div></div>
       <div className="tact-nav" style={{ width: 'fit-content', marginBottom: 22 }}>
         <button className={sub === 'users' ? 'active' : ''} onClick={() => setSub('users')}>ניהול משתמשי מערכת</button>
-        <button className={sub === 'links' ? 'active' : ''} onClick={() => setSub('links')}>שיוך לקוחות</button>
+        <button className={sub === 'select' ? 'active' : ''} onClick={() => setSub('select')}>בחירת לקוח</button>
       </div>
       {sub === 'users'
         ? <ManageUsers me={me} />
-        : <Admin links={links} reload={reloadLinks} />}
+        : <SelectCustomer />}
     </>
   )
 }

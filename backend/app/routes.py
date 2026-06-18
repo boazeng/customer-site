@@ -111,12 +111,34 @@ def build_router(priority: PriorityClient, links: LinksStore,
     def priority_customers():
         return {"customers": _wrap(lambda: priority.search_customers())}
 
-    @router.get("/admin/priority/find-by-email", dependencies=[admin_only])
-    def priority_find_by_email(email: str = Query(..., description="מייל הלקוח לאיתור")):
-        matches = _wrap(lambda: priority.find_customers_by_email(email))
+    @router.get("/admin/priority/customer-lookup", dependencies=[admin_only])
+    def priority_customer_lookup(
+        email: str | None = Query(None, description="מייל הלקוח לאיתור"),
+        custname: str | None = Query(None, description="מספר לקוח לאיתור"),
+    ):
+        """איתור לקוח ב-Priority לפי מייל או לפי מספר לקוח.
+
+        מחזיר status: none / one / many, יחד עם רשימת הלקוחות שנמצאו.
+        """
+        email = (email or "").strip()
+        custname = (custname or "").strip()
+        if not email and not custname:
+            raise HTTPException(400, "יש להזין מייל או מספר לקוח")
+
+        if custname:
+            try:
+                matches = [_wrap(lambda: priority.get_customer(custname))]
+            except HTTPException as exc:
+                if exc.status_code == 404:
+                    matches = []
+                else:
+                    raise
+        else:
+            matches = _wrap(lambda: priority.find_customers_by_email(email))
+
         status = "none" if not matches else ("one" if len(matches) == 1 else "many")
-        return {"email": email.strip(), "status": status,
-                "count": len(matches), "customers": matches}
+        return {"query": {"email": email, "custname": custname},
+                "status": status, "count": len(matches), "customers": matches}
 
     @router.get("/admin/priority/accounts", dependencies=[admin_only])
     def priority_accounts():

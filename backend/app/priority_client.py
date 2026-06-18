@@ -80,6 +80,26 @@ class PriorityClient:
         """ערך מחרוזת ל-OData (eq) — בריחה של גרש בודד."""
         return value.replace("'", "''")
 
+    # ---------- מיפוי שדות לקוח ----------
+    # שדות שנשלפים מ-CUSTOMERS לתצוגת פרטי לקוח
+    _CUST_SELECT = ("CUSTNAME,CUSTDES,EMAIL,PHONE,ADDRESS,STATE,STATDES,"
+                    "WTAXNUM,CODE,OWNERLOGIN,CUST")
+
+    @staticmethod
+    def _map_customer(r: dict) -> dict:
+        return {
+            "custname": r.get("CUSTNAME"),
+            "name": r.get("CUSTDES"),
+            "email": r.get("EMAIL"),
+            "phone": r.get("PHONE"),
+            "address": r.get("ADDRESS"),
+            "city": r.get("STATE") or r.get("STATEA"),
+            "status": r.get("STATDES"),
+            "tax_id": r.get("WTAXNUM"),
+            "currency": r.get("CODE"),
+            "owner": r.get("OWNERLOGIN"),
+        }
+
     # ---------- חשבוניות ----------
     def get_invoices(self, custname: str) -> list[dict]:
         def run():
@@ -104,11 +124,11 @@ class PriorityClient:
 
     # ---------- פרטי לקוח ----------
     def get_customer(self, custname: str) -> dict:
+        """פרטי לקוח לפי מספר לקוח (CUSTNAME). 404 אם לא קיים."""
         def run():
             d = self._get(f"CUSTOMERS('{self._q(custname)}')",
-                          {"$select": "CUSTNAME,CUSTDES,EMAIL,PHONE"})
-            return {"custname": d.get("CUSTNAME"), "name": d.get("CUSTDES"),
-                    "email": d.get("EMAIL"), "phone": d.get("PHONE")}
+                          {"$select": self._CUST_SELECT})
+            return self._map_customer(d)
         return self._cached(f"cust:{custname}", run)
 
     def find_customers_by_email(self, email: str) -> list[dict]:
@@ -124,11 +144,9 @@ class PriorityClient:
                 return []
             d = self._get("CUSTOMERS", {
                 "$filter": f"EMAIL eq '{self._q(email)}'",
-                "$select": "CUSTNAME,CUSTDES,EMAIL,PHONE",
+                "$select": self._CUST_SELECT,
             })
-            return [{"custname": r.get("CUSTNAME"), "name": r.get("CUSTDES"),
-                     "email": r.get("EMAIL"), "phone": r.get("PHONE")}
-                    for r in d.get("value", [])]
+            return [self._map_customer(r) for r in d.get("value", [])]
         return self._cached(f"custbyemail:{email.lower()}", run)
 
     def search_customers(self, top: int = 300) -> list[dict]:
