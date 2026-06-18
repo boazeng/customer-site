@@ -38,21 +38,23 @@ export default function Ledger({ ctx }) {
       {branches.length === 0 ? (
         <div className="state"><p>אין תנועות בכרטסת ללקוח זה.</p></div>
       ) : (
-        branches.map((b) => <BranchLedger key={b.accname} b={b} />)
+        branches.map((b) => <BranchLedger key={b.accname} b={b} cust={data.custname} />)
       )}
     </>
   )
 }
 
-function BranchLedger({ b }) {
+function BranchLedger({ b, cust }) {
   const lines = b.lines || []
   return (
     <div style={{ marginBottom: 32 }}>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, marginBottom: 10 }}>
         <h2 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--color-primary)' }}>
-          {b.branch ? `סניף ${b.branch}` : 'חשבון ראשי'}
+          {b.company ? `חברת ${b.company}` : 'חשבון כללי'}
+          <span className="sub" style={{ fontWeight: 400, marginInlineStart: 10 }}>
+            לקוח {cust}{b.name ? ` — ${b.name}` : ''}
+          </span>
         </h2>
-        <span className="sub">חשבון {b.accname}{b.name ? ` — ${b.name}` : ''}</span>
         <span className="sub" style={{ marginInlineStart: 'auto' }}>
           יתרה: <b className={b.balance < 0 ? 'neg' : 'pos'}>₪{fmtMoney(b.balance)}</b>
         </span>

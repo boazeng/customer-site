@@ -221,12 +221,20 @@ class PriorityClient:
             return out
         return self._cached(f"recvacc:{custname}", run)
 
+    def get_companies(self) -> dict:
+        """מיפוי קוד תת-חברה (סניף) → שם התת-חברה, מטבלת COMPANIES."""
+        def run():
+            d = self._get("COMPANIES", {"$select": "COMPANYNAME,COMPANYDES", "$top": "400"})
+            return {r.get("COMPANYNAME"): r.get("COMPANYDES") for r in d.get("value", [])}
+        return self._cached("companies", run)
+
     def get_customer_ledger(self, custname: str) -> dict:
-        """כרטסת הלקוח, מופרדת לפי סניפים. כל סניף עם תנועותיו ויתרתו."""
+        """כרטסת הלקוח, מופרדת לפי תת-חברות (סניפים). כל סניף עם תנועותיו ויתרתו."""
         custname = (custname or "").strip()
 
         def run():
             accounts = self.list_receivable_accounts(custname)
+            companies = self.get_companies()
             # מציגים סניפים פעילים (יתרה ≠ 0). אם הכל אפס — נציג את חשבון הבסיס.
             active = [a for a in accounts if a["balance"] != 0]
             if not active:
@@ -239,6 +247,7 @@ class PriorityClient:
                 branches.append({
                     "accname": a["accname"],
                     "branch": a["branch"],
+                    "company": companies.get(a["branch"], "") if a["branch"] else "",
                     "name": a["name"] or led.get("account_desc"),
                     "lines": led["lines"],
                     "total_debit": led["total_debit"],
