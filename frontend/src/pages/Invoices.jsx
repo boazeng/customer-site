@@ -6,6 +6,7 @@ export default function Invoices({ ctx }) {
   const [data, setData] = useState(null)
   const [err, setErr] = useState('')
   const [loading, setLoading] = useState(true)
+  const [busy, setBusy] = useState('')   // ivnum שמתבצעת לו הורדה
 
   useEffect(() => {
     setLoading(true); setErr('')
@@ -14,6 +15,21 @@ export default function Invoices({ ctx }) {
       .catch((e) => setErr(e.message))
       .finally(() => setLoading(false))
   }, [ctx.custname])
+
+  async function downloadPdf(r) {
+    setBusy(r.ivnum)
+    try {
+      const res = await fetch(
+        api.invoicePdfUrl({ ivnum: r.ivnum, source: r.source, custname: ctx.custname }),
+        { credentials: 'include' })
+      if (!res.ok) { alert(res.status === 404 ? 'אין מסמך PDF זמין לחשבונית זו' : 'שגיאה בהורדת המסמך'); return }
+      const url = URL.createObjectURL(await res.blob())
+      const a = document.createElement('a')
+      a.href = url; a.download = `invoice-${r.ivnum}.pdf`
+      document.body.appendChild(a); a.click(); a.remove()
+      URL.revokeObjectURL(url)
+    } catch { alert('שגיאה בהורדת המסמך') } finally { setBusy('') }
+  }
 
   if (loading) return <Loading text="טוען חשבוניות מ-Priority…" />
   if (err) return <div className="notice">{err}</div>
@@ -42,6 +58,7 @@ export default function Invoices({ ctx }) {
               <tr>
                 <th>תאריך</th><th>מספר חשבונית</th><th>סוג תנועה</th><th>פרטים</th><th>סטטוס</th>
                 <th className="num">לפני מע"מ</th><th className="num">מע"מ</th><th className="num">סה"כ</th>
+                <th>מסמך</th>
               </tr>
             </thead>
             <tbody>
@@ -55,6 +72,13 @@ export default function Invoices({ ctx }) {
                   <td className="num">{fmtMoney(r.before_vat)}</td>
                   <td className="num">{fmtMoney(r.vat)}</td>
                   <td className="num"><b>{fmtMoney(r.total)}</b></td>
+                  <td>
+                    <button className="link-dl" disabled={busy === r.ivnum}
+                      onClick={() => downloadPdf(r)} title="הורד חשבונית PDF">
+                      <TactIcon name="document" size={15} />
+                      {busy === r.ivnum ? '…' : 'PDF'}
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -62,6 +86,7 @@ export default function Invoices({ ctx }) {
               <tr>
                 <td colSpan={7}>סה"כ</td>
                 <td className="num">₪{fmtMoney(data?.total)}</td>
+                <td></td>
               </tr>
             </tfoot>
           </table>

@@ -31,6 +31,12 @@ async function post(url, body) {
 export const api = {
   me: () => req('/api/me'),
   invoices: (custname) => req('/api/invoices' + (custname ? `?custname=${encodeURIComponent(custname)}` : '')),
+  invoicePdfUrl: ({ ivnum, source, custname }) => {
+    const p = new URLSearchParams({ ivnum })
+    if (source) p.set('source', source)
+    if (custname) p.set('custname', custname)
+    return '/api/invoice-pdf?' + p.toString()
+  },
   ledger: (custname) => req('/api/ledger' + (custname ? `?custname=${encodeURIComponent(custname)}` : '')),
   adminLinks: () => req('/api/admin/links'),
   saveLink: (body) => post('/api/admin/links', body),

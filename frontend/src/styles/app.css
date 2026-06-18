@@ -116,3 +116,13 @@ table.data td input.cell:focus, table.data td select.cell:focus {
 table.data tr.add-row td { background: var(--color-primary-soft); }
 .chk { display: inline-flex; align-items: center; gap: 5px; font-size: .82rem; white-space: nowrap; }
 .btn-sm { padding: 6px 14px; font-size: .85rem; }
+
+/* כפתור הורדת PDF בשורת חשבונית */
+.link-dl {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: none; border: 1px solid var(--color-border); cursor: pointer;
+  color: var(--color-primary); font: inherit; font-size: .82rem; font-weight: 600;
+  padding: 5px 11px; border-radius: 999px; transition: all .15s; white-space: nowrap;
+}
+.link-dl:hover:not(:disabled) { background: var(--color-primary-soft); border-color: var(--color-primary); }
+.link-dl:disabled { opacity: .5; cursor: default; }

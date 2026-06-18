@@ -130,14 +130,17 @@ class PriorityClient:
             for r in data.get("value", []):
                 if r.get("STATDES") != "סופית":
                     continue  # מציגים רק חשבוניות בסטטוס סופית (לא טיוטא/מבוטלת)
+                # זיכוי (DEBIT=C) מקטין את החוב — מוצג בסכומים שליליים, וכך גם בסה"כ
+                sign = -1 if r.get("DEBIT") == "C" else 1
                 out.append({
                     "ivnum": r.get("IVNUM"),
                     "date": (r.get("IVDATE") or "")[:10],
                     "type": self._invoice_label(entity, r.get("DEBIT")),
+                    "source": entity,   # הישות שממנה הגיעה — לשליפת ה-PDF
                     "status": r.get("STATDES"),
-                    "before_vat": _num(r.get("QPRICE")),
-                    "vat": _num(r.get("VAT")),
-                    "total": _num(r.get("TOTPRICE")),
+                    "before_vat": sign * _num(r.get("QPRICE")),
+                    "vat": sign * _num(r.get("VAT")),
+                    "total": sign * _num(r.get("TOTPRICE")),
                     "details": r.get("DETAILS") or "",
                 })
             return out
@@ -150,6 +153,43 @@ class PriorityClient:
             rows.sort(key=lambda r: r["date"], reverse=True)
             return rows
         return self._cached(f"inv:{custname}", run)
+
+    # ---------- PDF של חשבונית ----------
+    # ב-Priority ה-PDF הרשמי ("מסמך ממוחשב") נשמר ב-EXTFILES_SUBFORM, כאשר השדה
+    # EXTFILENAME מכיל data:application/pdf;base64,<...>. שולפים, מפענחים, ומחזירים bytes.
+    def get_invoice_pdf(self, custname: str, ivnum: str, source: str | None = None):
+        """מחזיר (pdf_bytes, filename) לחשבונית של הלקוח. מסונן לפי CUSTNAME (אבטחה)."""
+        import base64
+        custname = (custname or "").strip()
+        ivnum = (ivnum or "").strip()
+        if not custname or not ivnum:
+            raise PriorityError("חסר מספר חשבונית או לקוח", 400)
+        entities = ([source] if source in self._INVOICE_ENTITIES
+                    else list(self._INVOICE_ENTITIES))
+
+        def run():
+            for entity in entities:
+                try:
+                    d = self._get(entity, {
+                        "$filter": (f"IVNUM eq '{self._q(ivnum)}' and "
+                                    f"CUSTNAME eq '{self._q(custname)}'"),
+                        "$select": "IVNUM",
+                        "$expand": "EXTFILES_SUBFORM",
+                    })
+                except PriorityError:
+                    continue
+                for inv in d.get("value", []):
+                    for f in inv.get("EXTFILES_SUBFORM", []) or []:
+                        name = f.get("EXTFILENAME") or ""
+                        if name.startswith("data:application/pdf") and "," in name:
+                            try:
+                                pdf = base64.b64decode(name.split(",", 1)[1])
+                            except (ValueError, TypeError):
+                                continue
+                            if pdf[:4] == b"%PDF":
+                                return pdf, f"invoice-{ivnum}.pdf"
+            raise PriorityError("לא נמצא קובץ PDF לחשבונית זו", 404)
+        return self._cached(f"pdf:{source}:{custname}:{ivnum}", run)
 
     # ---------- פרטי לקוח ----------
     def get_customer(self, custname: str) -> dict:

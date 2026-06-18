@@ -5,6 +5,7 @@
   - מנהל (role=admin): יכול לבחור כל לקוח (custname/accname ב-query) ולנהל שיוכים.
 """
 from fastapi import APIRouter, Request, Depends, HTTPException, Query
+from fastapi.responses import Response
 
 from .priority_client import PriorityClient, PriorityError
 from .links_store import LinksStore
@@ -72,6 +73,16 @@ def build_router(priority: PriorityClient, links: LinksStore,
         rows = _wrap(lambda: priority.get_invoices(cust))
         return {"custname": cust, "display_name": display, "invoices": rows,
                 "count": len(rows), "total": round(sum(r["total"] for r in rows), 2)}
+
+    @router.get("/invoice-pdf")
+    def invoice_pdf(request: Request, ivnum: str = Query(...),
+                    source: str | None = Query(None), custname: str | None = Query(None)):
+        cust, _acc, _display, _is_admin = _resolve(request, custname, None)
+        if not cust:
+            raise HTTPException(400, "לא נבחר לקוח")
+        pdf, fname = _wrap(lambda: priority.get_invoice_pdf(cust, ivnum, source))
+        return Response(content=pdf, media_type="application/pdf",
+                        headers={"Content-Disposition": f'inline; filename="{fname}"'})
 
     # ---------------- כרטסת ----------------
     @router.get("/ledger")
