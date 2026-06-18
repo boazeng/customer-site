@@ -41,11 +41,10 @@ export default function SelectCustomer({ active, onSelectCustomer }) {
             value={value}
             onChange={(e) => setValue(e.target.value)}
             placeholder={mode === 'email' ? 'customer@example.com' : 'לדוגמה: 50003'}
-            style={{ width: 320, maxWidth: '100%', fontSize: '1.15rem', padding: '10px 14px' }}
+            style={{ width: 280, maxWidth: '100%', fontSize: '.95rem', padding: '8px 12px' }}
             autoFocus
           />
-          <button className="tact-btn tact-btn-primary" type="submit" disabled={loading || !value.trim()}
-            style={{ fontSize: '1.05rem' }}>
+          <button className="tact-btn tact-btn-primary" type="submit" disabled={loading || !value.trim()}>
             {loading ? 'מחפש…' : 'איתור'}
           </button>
         </div>
@@ -84,25 +83,23 @@ function CustomerCard({ c, isActive, onSelect }) {
     ['עיר', c.city],
     ['טלפון', c.phone],
     ['מייל', c.email],
-    ['מטבע', c.currency],
-    ['מנהל תיק', c.owner],
     ['סטטוס', c.status],
   ].filter(([, v]) => v)
 
   return (
-    <div className="tact-card" style={{ width: 'fit-content', minWidth: 340 }}>
-      <div className="tact-card-cap" style={{ padding: '12px 16px' }}>
-        <h3 style={{ margin: 0, fontSize: '1.2rem' }}>{c.name || c.custname}</h3>
-        <div className="tact-card-ico"><TactIcon name="clients" size={18} /></div>
+    <div className="tact-card" style={{ width: 'fit-content', minWidth: 320 }}>
+      <div className="tact-card-cap" style={{ padding: '10px 14px' }}>
+        <h3 style={{ margin: 0, fontSize: '1rem' }}>{c.name || c.custname}</h3>
+        <div className="tact-card-ico"><TactIcon name="clients" size={16} /></div>
       </div>
-      <div className="tact-card-body" style={{ padding: '6px 16px 14px' }}>
-        <table style={{ borderCollapse: 'collapse', fontSize: '1.05rem' }}>
+      <div className="tact-card-body" style={{ padding: '4px 14px 12px' }}>
+        <table style={{ borderCollapse: 'collapse', fontSize: '.85rem' }}>
           <tbody>
             {rows.map(([k, v]) => (
               <tr key={k}>
-                <th style={{ textAlign: 'right', whiteSpace: 'nowrap', padding: '5px 0',
+                <th style={{ textAlign: 'right', whiteSpace: 'nowrap', padding: '4px 0 4px 28px',
                   color: 'var(--color-accent)', fontWeight: 600, verticalAlign: 'top' }}>{k}</th>
-                <td style={{ padding: '5px 0 5px 18px', fontWeight: 500 }}>{v}</td>
+                <td style={{ padding: '4px 0', fontWeight: 500 }}>{v}</td>
               </tr>
             ))}
           </tbody>
