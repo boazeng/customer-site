@@ -6,7 +6,7 @@ export default function Invoices({ ctx }) {
   const [data, setData] = useState(null)
   const [err, setErr] = useState('')
   const [loading, setLoading] = useState(true)
-  const [busy, setBusy] = useState('')   // ivnum שמתבצעת לו הורדה
+  const [busy, setBusy] = useState('')   // ivnum שנטען כרגע לצפייה
 
   useEffect(() => {
     setLoading(true); setErr('')
@@ -16,19 +16,25 @@ export default function Invoices({ ctx }) {
       .finally(() => setLoading(false))
   }, [ctx.custname])
 
-  async function downloadPdf(r) {
+  // פותח את החשבונית (PDF) בלשונית חדשה לצפייה והדפסה — לא מוריד קובץ.
+  async function viewPdf(r) {
     setBusy(r.ivnum)
+    // פתיחת הלשונית סינכרונית (בתוך לחיצת המשתמש) כדי לא להיחסם ע"י חוסם הקופצים
+    const win = window.open('', '_blank')
+    if (win) win.document.write('<p style="font-family:sans-serif;padding:24px">טוען חשבונית…</p>')
     try {
       const res = await fetch(
         api.invoicePdfUrl({ ivnum: r.ivnum, source: r.source, custname: ctx.custname }),
         { credentials: 'include' })
-      if (!res.ok) { alert(res.status === 404 ? 'אין מסמך PDF זמין לחשבונית זו' : 'שגיאה בהורדת המסמך'); return }
+      if (!res.ok) {
+        win?.close()
+        alert(res.status === 404 ? 'אין מסמך PDF זמין לחשבונית זו' : 'המסמך אינו זמין כרגע, נסה שוב')
+        return
+      }
       const url = URL.createObjectURL(await res.blob())
-      const a = document.createElement('a')
-      a.href = url; a.download = `invoice-${r.ivnum}.pdf`
-      document.body.appendChild(a); a.click(); a.remove()
-      URL.revokeObjectURL(url)
-    } catch { alert('שגיאה בהורדת המסמך') } finally { setBusy('') }
+      if (win) win.location = url; else window.open(url, '_blank')
+      setTimeout(() => URL.revokeObjectURL(url), 60000)  // משחררים אחרי שהצופן נטען
+    } catch { win?.close(); alert('שגיאה בטעינת המסמך') } finally { setBusy('') }
   }
 
   if (loading) return <Loading text="טוען חשבוניות מ-Priority…" />
@@ -74,9 +80,9 @@ export default function Invoices({ ctx }) {
                   <td className="num"><b>{fmtMoney(r.total)}</b></td>
                   <td>
                     <button className="link-dl" disabled={busy === r.ivnum}
-                      onClick={() => downloadPdf(r)} title="הורד חשבונית PDF">
+                      onClick={() => viewPdf(r)} title="צפייה והדפסת החשבונית">
                       <TactIcon name="document" size={15} />
-                      {busy === r.ivnum ? '…' : 'PDF'}
+                      {busy === r.ivnum ? '…' : 'צפייה'}
                     </button>
                   </td>
                 </tr>
