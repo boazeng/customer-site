@@ -11,7 +11,7 @@ from shared_auth.sessions import COOKIE_NAME
 from shared_auth.db import norm_email
 
 
-def install_dev_login(app, sessions, db, config, links) -> None:
+def install_dev_login(app, sessions, db, config) -> None:
 
     def _resolve_role(email: str):
         if email and email == config.super_admin_email:
@@ -30,7 +30,7 @@ def install_dev_login(app, sessions, db, config, links) -> None:
             resp.set_cookie(COOKIE_NAME, sessions.sign({"email": email, "role": role, "name": name}),
                             max_age=sessions.max_age, httponly=True, secure=False, samesite="lax")
             return resp
-        return HTMLResponse(_render(db, links))
+        return HTMLResponse(_render(db))
 
 
 def _chip(email: str, label: str, kind: str) -> str:
@@ -38,15 +38,11 @@ def _chip(email: str, label: str, kind: str) -> str:
             f'<b>{label}</b><span>{email}</span></a>')
 
 
-def _render(db, links) -> str:
+def _render(db) -> str:
     admins = [u for u in db.list_all() if u["role"] == "admin" and u["active"]]
-    customers = links.list_all()
     admin_html = "".join(_chip(u["email"], u["name"] or "מנהל", "admin") for u in admins) \
         or '<p class="muted">אין מנהלים מוגדרים עדיין</p>'
-    cust_html = "".join(
-        _chip(c["email"], c["display_name"] or c["custname"], "cust") for c in customers) \
-        or '<p class="muted">אין לקוחות משויכים — הוסיפו במסך הניהול</p>'
-    return _PAGE.replace("{{ADMINS}}", admin_html).replace("{{CUSTOMERS}}", cust_html)
+    return _PAGE.replace("{{ADMINS}}", admin_html)
 
 
 _PAGE = """<!DOCTYPE html>
@@ -96,8 +92,7 @@ button:hover{filter:brightness(1.08)}
 
  <h2>מנהלים</h2>
  <div class="chips">{{ADMINS}}</div>
- <h2>לקוחות משויכים (יש להם נתונים)</h2>
- <div class="chips">{{CUSTOMERS}}</div>
+ <p class="muted" style="margin-top:14px">לקוח: הזן מייל שמופיע בכרטיס הלקוח ב-Priority — הזיהוי נעשה אוטומטית.</p>
 
  <a class="google" href="/login">או התחבר עם Google ›</a>
 </div></body></html>"""

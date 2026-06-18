@@ -38,9 +38,6 @@ export const api = {
     return '/api/invoice-pdf?' + p.toString()
   },
   ledger: (custname) => req('/api/ledger' + (custname ? `?custname=${encodeURIComponent(custname)}` : '')),
-  adminLinks: () => req('/api/admin/links'),
-  saveLink: (body) => post('/api/admin/links', body),
-  deleteLink: (email) => post('/api/admin/links/delete', { email }),
   priorityCustomers: () => req('/api/admin/priority/customers'),
   priorityAccounts: () => req('/api/admin/priority/accounts'),
   // איתור לקוח ב-Priority לפי מייל או מספר לקוח

@@ -14,7 +14,6 @@ from shared_auth import install_auth, current_user, require_role
 
 from .settings import Settings
 from .priority_client import PriorityClient
-from .links_store import LinksStore
 from .routes import build_router
 from .dev_login import install_dev_login
 
@@ -47,13 +46,12 @@ app.add_middleware(
 
 priority = PriorityClient(settings.priority_base_url, settings.priority_user,
                           settings.priority_password, cache_ttl=settings.priority_cache_ttl)
-links = LinksStore(settings.db_dir / "links.db")
 
-app.include_router(build_router(priority, links, current_user, require_role))
+app.include_router(build_router(priority, current_user, require_role))
 
-# כניסה לבדיקות (פיתוח בלבד) — חייב להגיע אחרי יצירת links/auth ולפני ה-catch-all של ה-SPA
+# כניסה לבדיקות (פיתוח בלבד) — חייב להגיע אחרי האימות ולפני ה-catch-all של ה-SPA
 if settings.dev_login_enabled:
-    install_dev_login(app, auth["sessions"], auth["db"], auth["config"], links)
+    install_dev_login(app, auth["sessions"], auth["db"], auth["config"])
     log.warning("DEV_LOGIN פעיל — /dev-login פתוח. לכבות בפרודקשן (DEV_LOGIN_ENABLED=false).")
 
 

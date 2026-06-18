@@ -1,42 +1,39 @@
 """נתיבי ה-API של אתר הלקוחות.
 
 הרשאות:
-  - לקוח (role=user/approver): רואה רק את הלקוח המשויך לאימייל שלו.
-  - מנהל (role=admin): יכול לבחור כל לקוח (custname/accname ב-query) ולנהל שיוכים.
+  - לקוח (role=user/approver): רואה רק את הלקוח שלו, שמזוהה מ-Priority לפי המייל
+    שאיתו נכנס (שדה EMAIL בכרטיס הלקוח). אין מאגר שיוכים — Priority הוא מקור האמת.
+  - מנהל (role=admin): בוחר כל לקוח (custname ב-query) דרך מסך "בחירת לקוח".
 """
 from fastapi import APIRouter, Request, Depends, HTTPException, Query
 from fastapi.responses import Response
 
 from .priority_client import PriorityClient, PriorityError
-from .links_store import LinksStore
 
 
-def build_router(priority: PriorityClient, links: LinksStore,
-                 current_user, require_role) -> APIRouter:
+def build_router(priority: PriorityClient, current_user, require_role) -> APIRouter:
     router = APIRouter(prefix="/api")
     admin_only = Depends(require_role("admin"))
 
-    def _resolve(request: Request, custname: str | None, accname: str | None):
-        """מחזיר (custname, accname, display, is_admin) בהתאם להרשאה."""
+    def _customer_for(email: str) -> dict | None:
+        """זיהוי לקוח רגיל מ-Priority לפי המייל. רק התאמה יחידה נחשבת."""
+        matches = priority.find_customers_by_email(email or "")
+        return matches[0] if len(matches) == 1 else None
+
+    def _resolve(request: Request, custname: str | None):
+        """מחזיר (custname, display, is_admin) בהתאם להרשאה.
+
+        מנהל — הלקוח מגיע ב-query. לקוח רגיל — מזוהה מ-Priority לפי המייל.
+        """
         user = current_user(request)
         if not user:
             raise HTTPException(401, "לא מחובר")
-        is_admin = user.get("role") == "admin"
-        if is_admin:
-            link = None
-            if custname and not accname:
-                # אם יש שיוך תואם — נשלים ממנו את שם-החשבון
-                for l in links.list_all():
-                    if l["custname"] == custname:
-                        link = l
-                        break
-            return (custname, accname or (link["accname"] if link else ""),
-                    (link["display_name"] if link else custname) or custname, True)
-        link = links.get_by_email(user["email"])
-        if not link:
-            raise HTTPException(403, "אין-שיוך")
-        return (link["custname"], link["accname"],
-                link["display_name"] or link["custname"], False)
+        if user.get("role") == "admin":
+            return custname, (custname or ""), True
+        c = _customer_for(user.get("email"))
+        if not c:
+            raise HTTPException(403, "לא זוהה לקוח")
+        return c["custname"], (c["name"] or c["custname"]), False
 
     def _wrap(fn):
         try:
@@ -45,21 +42,22 @@ def build_router(priority: PriorityClient, links: LinksStore,
             raise HTTPException(exc.status, exc.message) from exc
 
     # ---------------- זהות והקשר ----------------
+    # def (לא async) — זיהוי הלקוח פונה ל-Priority (קריאה חוסמת) ולכן רץ ב-threadpool.
     @router.get("/me")
-    async def me(request: Request):
+    def me(request: Request):
         user = current_user(request) or {}
         is_admin = user.get("role") == "admin"
-        link = None if is_admin else links.get_by_email(user.get("email", ""))
+        c = None if is_admin else _customer_for(user.get("email", ""))
         return {
             "email": user.get("email"),
             "name": user.get("name"),
             "role": user.get("role"),
             "is_admin": is_admin,
-            "linked": bool(link) or is_admin,
-            "customer": None if is_admin else {
-                "custname": link["custname"], "accname": link["accname"],
-                "display_name": link["display_name"] or link["custname"],
-            } if link else None,
+            "linked": is_admin or bool(c),
+            "customer": None if (is_admin or not c) else {
+                "custname": c["custname"],
+                "display_name": c["name"] or c["custname"],
+            },
         }
 
     # ---------------- חשבוניות ----------------
@@ -67,7 +65,7 @@ def build_router(priority: PriorityClient, links: LinksStore,
     # יריץ אותם ב-threadpool — קריאת httpx הסינכרונית לא תחסום את לולאת האירועים.
     @router.get("/invoices")
     def invoices(request: Request, custname: str | None = Query(None)):
-        cust, _acc, display, _is_admin = _resolve(request, custname, None)
+        cust, display, _is_admin = _resolve(request, custname)
         if not cust:
             raise HTTPException(400, "לא נבחר לקוח")
         rows = _wrap(lambda: priority.get_invoices(cust))
@@ -77,7 +75,7 @@ def build_router(priority: PriorityClient, links: LinksStore,
     @router.get("/invoice-pdf")
     def invoice_pdf(request: Request, ivnum: str = Query(...),
                     source: str | None = Query(None), custname: str | None = Query(None)):
-        cust, _acc, _display, _is_admin = _resolve(request, custname, None)
+        cust, _display, _is_admin = _resolve(request, custname)
         if not cust:
             raise HTTPException(400, "לא נבחר לקוח")
         pdf, fname = _wrap(lambda: priority.get_invoice_pdf(cust, ivnum, source))
@@ -87,7 +85,7 @@ def build_router(priority: PriorityClient, links: LinksStore,
     # ---------------- כרטסת ----------------
     @router.get("/ledger")
     def ledger(request: Request, custname: str | None = Query(None)):
-        cust, _acc, display, _is_admin = _resolve(request, custname, None)
+        cust, display, _is_admin = _resolve(request, custname)
         if not cust:
             raise HTTPException(400, "לא נבחר לקוח")
         data = _wrap(lambda: priority.get_customer_ledger(cust))
@@ -95,27 +93,6 @@ def build_router(priority: PriorityClient, links: LinksStore,
         return data
 
     # ---------------- ניהול (admin) ----------------
-    @router.get("/admin/links", dependencies=[admin_only])
-    async def list_links():
-        return {"links": links.list_all()}
-
-    @router.post("/admin/links", dependencies=[admin_only])
-    async def save_link(body: dict):
-        email = (body.get("email") or "").strip()
-        custname = (body.get("custname") or "").strip()
-        if not email or "@" not in email:
-            raise HTTPException(400, "אימייל לא תקין")
-        if not custname:
-            raise HTTPException(400, "חובה לבחור לקוח (custname)")
-        links.upsert(email, custname, body.get("accname", ""),
-                     body.get("display_name", ""))
-        return {"ok": True}
-
-    @router.post("/admin/links/delete", dependencies=[admin_only])
-    async def delete_link(body: dict):
-        links.delete((body.get("email") or "").strip())
-        return {"ok": True}
-
     @router.get("/admin/priority/customers", dependencies=[admin_only])
     def priority_customers():
         return {"customers": _wrap(lambda: priority.search_customers())}
