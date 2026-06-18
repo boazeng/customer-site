@@ -5,7 +5,6 @@ import TactIcon from './TactIcon.jsx'
 const TABS = [
   { key: 'invoices', label: 'חשבוניות', icon: 'invoices' },
   { key: 'ledger', label: 'כרטסת', icon: 'reports' },
-  { key: 'service', label: 'קריאות שירות', icon: 'chat', soon: true },
 ]
 
 export default function Header({ me, view, setView, customers, selected, setSelected }) {
@@ -30,13 +29,6 @@ export default function Header({ me, view, setView, customers, selected, setSele
               </span>
             </button>
           ))}
-          {me?.is_admin && (
-            <button className={view === 'admin' ? 'active' : ''} onClick={() => setView('admin')}>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                <TactIcon name="clients" size={16} /> שיוך לקוחות
-              </span>
-            </button>
-          )}
           {me?.is_admin && (
             <button className={view === 'sysadmin' ? 'active' : ''} onClick={() => setView('sysadmin')}>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>

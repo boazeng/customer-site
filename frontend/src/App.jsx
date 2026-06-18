@@ -50,10 +50,14 @@ export default function App() {
       />
       <main className="content">
         <div className="container">
-          {view === 'admin' && me.is_admin && (
-            <Admin links={links} reload={() => api.adminLinks().then((d) => setLinks(d.links))} />
+          {view === 'sysadmin' && me.is_admin && (
+            <>
+              <SysAdmin me={me} />
+              <div style={{ marginTop: 44 }}>
+                <Admin links={links} reload={() => api.adminLinks().then((d) => setLinks(d.links))} />
+              </div>
+            </>
           )}
-          {view === 'sysadmin' && me.is_admin && <SysAdmin me={me} />}
           {(view === 'invoices' || view === 'ledger') && (
             <ActiveView view={view} ctx={ctx} isAdmin={me.is_admin} />
           )}
