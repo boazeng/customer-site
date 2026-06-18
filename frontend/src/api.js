@@ -31,13 +31,7 @@ async function post(url, body) {
 export const api = {
   me: () => req('/api/me'),
   invoices: (custname) => req('/api/invoices' + (custname ? `?custname=${encodeURIComponent(custname)}` : '')),
-  ledger: (custname, accname) => {
-    const p = new URLSearchParams()
-    if (custname) p.set('custname', custname)
-    if (accname) p.set('accname', accname)
-    const qs = p.toString()
-    return req('/api/ledger' + (qs ? `?${qs}` : ''))
-  },
+  ledger: (custname) => req('/api/ledger' + (custname ? `?custname=${encodeURIComponent(custname)}` : '')),
   adminLinks: () => req('/api/admin/links'),
   saveLink: (body) => post('/api/admin/links', body),
   deleteLink: (email) => post('/api/admin/links/delete', { email }),
@@ -54,6 +48,13 @@ export const api = {
   authUsers: () => req('/auth/users'),
   saveUser: (body) => post('/auth/users', body),
   deleteUser: (email) => post('/auth/users/delete', { email }),
+}
+
+// עיצוב תאריך — תמיד dd-mm-yyyy (הקלט מ-Priority הוא yyyy-mm-dd)
+export function fmtDate(s) {
+  if (!s) return ''
+  const m = String(s).slice(0, 10).match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  return m ? `${m[3]}-${m[2]}-${m[1]}` : String(s)
 }
 
 // עיצוב מספרים — מפריד אלפים, שליליים באדום בסוגריים (כמו בדוחות הנהח"ש)

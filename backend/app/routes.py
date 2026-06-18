@@ -75,14 +75,12 @@ def build_router(priority: PriorityClient, links: LinksStore,
 
     # ---------------- כרטסת ----------------
     @router.get("/ledger")
-    def ledger(request: Request, custname: str | None = Query(None),
-               accname: str | None = Query(None)):
-        cust, acc, display, _is_admin = _resolve(request, custname, accname)
-        if not acc:
-            raise HTTPException(409, "לא-הוגדר-חשבון")
-        data = _wrap(lambda: priority.get_ledger(acc))
+    def ledger(request: Request, custname: str | None = Query(None)):
+        cust, _acc, display, _is_admin = _resolve(request, custname, None)
+        if not cust:
+            raise HTTPException(400, "לא נבחר לקוח")
+        data = _wrap(lambda: priority.get_customer_ledger(cust))
         data["display_name"] = display
-        data["custname"] = cust
         return data
 
     # ---------------- ניהול (admin) ----------------

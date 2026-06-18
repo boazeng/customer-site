@@ -158,41 +158,99 @@ class PriorityClient:
                     for r in d.get("value", [])]
         return self._cached(f"custlist:{top}", run)
 
-    # ---------- כרטסת (דרך חשבון ההנהלת-חשבונות) ----------
-    def get_ledger(self, accname: str) -> dict:
-        def run():
-            # הערה: סינון/בחירת-שדות בתוך $expand אינם נתמכים כאן (400) — מרחיבים מלא.
-            d = self._get(f"ACCOUNTS('{self._q(accname)}')", {
-                "$select": "ACCNAME,ACCDES,BALANCE1",
-                "$expand": "ACCFNCITEMS2_SUBFORM",
+    # ---------- כרטסת לקוח ----------
+    # חשבונות הלקוח יושבים ב-ACCOUNTS_RECEIVABLE בשם <מספר-לקוח> ו-<מספר-לקוח>-<סניף>.
+    # (FNCCUST — הכרטסת הישירה — חסומה ל-API, ולכן עוברים דרך חשבון החייבים.)
+    def _account_ledger(self, accname: str, entity: str = "ACCOUNTS_RECEIVABLE") -> dict:
+        # הערה: סינון/בחירת-שדות בתוך $expand אינם נתמכים כאן (400) — מרחיבים מלא.
+        d = self._get(f"{entity}('{self._q(accname)}')", {
+            "$select": "ACCNAME,ACCDES,BALANCE1",
+            "$expand": "ACCFNCITEMS2_SUBFORM",
+        })
+        raw = d.get("ACCFNCITEMS2_SUBFORM", []) or []
+        raw.sort(key=lambda r: (r.get("FNCDATE") or "", r.get("FNCNUM") or ""))
+        lines, running = [], 0.0
+        # שדה BAL מ-Priority אינו אמין כאן (חוזר 0) — מחשבים יתרה רצה בעצמנו.
+        for r in raw:
+            debit, credit = _num(r.get("DEBIT")), _num(r.get("CREDIT"))
+            running += debit - credit
+            lines.append({
+                "date": (r.get("FNCDATE") or "")[:10],
+                "ivnum": r.get("IVNUM"),
+                "fncnum": r.get("FNCNUM"),
+                "details": r.get("DETAILS") or r.get("FNCPATNAME") or "",
+                "debit": debit,
+                "credit": credit,
+                "balance": round(running, 2),
             })
-            raw = d.get("ACCFNCITEMS2_SUBFORM", []) or []
-            raw.sort(key=lambda r: (r.get("FNCDATE") or "", r.get("FNCNUM") or ""))
-            lines, running = [], 0.0
-            # שדה BAL מ-Priority אינו אמין כאן (חוזר 0) — מחשבים יתרה רצה בעצמנו.
-            for r in raw:
-                debit, credit = _num(r.get("DEBIT")), _num(r.get("CREDIT"))
-                running += debit - credit
-                lines.append({
-                    "date": (r.get("FNCDATE") or "")[:10],
-                    "ivnum": r.get("IVNUM"),
-                    "fncnum": r.get("FNCNUM"),
-                    "details": r.get("DETAILS") or r.get("FNCPATNAME") or "",
-                    "debit": debit,
-                    "credit": credit,
-                    "balance": round(running, 2),
+        total_debit = round(sum(l["debit"] for l in lines), 2)
+        total_credit = round(sum(l["credit"] for l in lines), 2)
+        return {
+            "account": d.get("ACCNAME"),
+            "account_desc": d.get("ACCDES"),
+            "lines": lines,
+            "total_debit": total_debit,
+            "total_credit": total_credit,
+            "balance": round(total_debit - total_credit, 2),
+        }
+
+    def list_receivable_accounts(self, custname: str) -> list[dict]:
+        """כל חשבונות החייבים של הלקוח: הבסיס <custname> וחשבונות הסניפים <custname>-<סניף>."""
+        custname = (custname or "").strip()
+
+        def run():
+            if not custname:
+                return []
+            try:
+                hi = str(int(custname) + 1)
+            except ValueError:
+                hi = custname + "￿"
+            d = self._get("ACCOUNTS_RECEIVABLE", {
+                "$filter": f"ACCNAME ge '{self._q(custname)}' and ACCNAME lt '{self._q(hi)}'",
+                "$select": "ACCNAME,ACCDES,BALANCE1",
+                "$orderby": "ACCNAME",
+            })
+            out = []
+            for r in d.get("value", []):
+                acc = r.get("ACCNAME") or ""
+                if acc != custname and not acc.startswith(custname + "-"):
+                    continue  # לא חשבון של הלקוח הזה
+                branch = acc[len(custname) + 1:] if acc.startswith(custname + "-") else ""
+                out.append({"accname": acc, "branch": branch,
+                            "name": r.get("ACCDES"), "balance": _num(r.get("BALANCE1"))})
+            return out
+        return self._cached(f"recvacc:{custname}", run)
+
+    def get_customer_ledger(self, custname: str) -> dict:
+        """כרטסת הלקוח, מופרדת לפי סניפים. כל סניף עם תנועותיו ויתרתו."""
+        custname = (custname or "").strip()
+
+        def run():
+            accounts = self.list_receivable_accounts(custname)
+            # מציגים סניפים פעילים (יתרה ≠ 0). אם הכל אפס — נציג את חשבון הבסיס.
+            active = [a for a in accounts if a["balance"] != 0]
+            if not active:
+                base = next((a for a in accounts if a["branch"] == ""), None)
+                active = [base] if base else accounts[:1]
+                active = [a for a in active if a]
+            branches = []
+            for a in active:
+                led = self._account_ledger(a["accname"])
+                branches.append({
+                    "accname": a["accname"],
+                    "branch": a["branch"],
+                    "name": a["name"] or led.get("account_desc"),
+                    "lines": led["lines"],
+                    "total_debit": led["total_debit"],
+                    "total_credit": led["total_credit"],
+                    "balance": led["balance"],
                 })
-            total_debit = round(sum(l["debit"] for l in lines), 2)
-            total_credit = round(sum(l["credit"] for l in lines), 2)
             return {
-                "account": d.get("ACCNAME"),
-                "account_desc": d.get("ACCDES"),
-                "lines": lines,
-                "total_debit": total_debit,
-                "total_credit": total_credit,
-                "balance": round(total_debit - total_credit, 2),
+                "custname": custname,
+                "branches": branches,
+                "balance": round(sum(b["balance"] for b in branches), 2),
             }
-        return self._cached(f"led:{accname}", run)
+        return self._cached(f"custled:{custname}", run)
 
     def search_accounts(self, top: int = 500) -> list[dict]:
         """רשימת חשבונות לבחירת שם-חשבון ללקוח (סינון בצד הלקוח)."""

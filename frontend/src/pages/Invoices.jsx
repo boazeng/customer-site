@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { api, fmtMoney } from '../api.js'
+import { api, fmtMoney, fmtDate } from '../api.js'
 import TactIcon from '../components/TactIcon.jsx'
 
 export default function Invoices({ ctx }) {
@@ -47,7 +47,7 @@ export default function Invoices({ ctx }) {
             <tbody>
               {rows.map((r) => (
                 <tr key={`${r.ivnum}-${r.fncnum}`}>
-                  <td className="num">{r.date}</td>
+                  <td className="num">{fmtDate(r.date)}</td>
                   <td>{r.ivnum}</td>
                   <td className="muted">{r.details}</td>
                   <td>{r.status}</td>
