@@ -172,18 +172,14 @@ class PriorityClient:
         """מחזיר (pdf_bytes, filename) לחשבונית של הלקוח. מסונן לפי CUSTNAME (אבטחה).
 
         שרת Priority נוטה לקטוע תשובות גדולות (ה-PDF ב-base64) — 'incomplete chunked
-        read'. לכן: ניסיונות חוזרים עם backoff, ומטמון קבוע (חשבונית אינה משתנה).
+        read'. לכן יש ניסיונות חוזרים עם backoff. אין שמירת חשבוניות/PDF במערכת —
+        הקובץ נשלף מ-Priority בכל בקשה ומוחזר ישירות ללקוח, ללא מטמון.
         """
         import base64
         custname = (custname or "").strip()
         ivnum = (ivnum or "").strip()
         if not custname or not ivnum:
             raise PriorityError("חסר מספר חשבונית או לקוח", 400)
-
-        pdf_cache = self.__dict__.setdefault("_pdf_cache", {})
-        ckey = f"{source}:{custname}:{ivnum}"
-        if ckey in pdf_cache:
-            return pdf_cache[ckey]
 
         entities = ([source] if source in self._INVOICE_ENTITIES
                     else list(self._INVOICE_ENTITIES))
@@ -224,9 +220,7 @@ class PriorityClient:
                 found_invoice = True
                 pdf = extract(d)
                 if pdf:
-                    result = (pdf, f"invoice-{ivnum}.pdf")
-                    pdf_cache[ckey] = result
-                    return result
+                    return pdf, f"invoice-{ivnum}.pdf"
             else:
                 # עברנו על כל הישויות ללא קטיעת-רשת — אין PDF
                 if found_invoice or not last_err:
