@@ -53,7 +53,7 @@ function BranchLedger({ b, cust }) {
     <div style={{ marginBottom: 32 }}>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, marginBottom: 10 }}>
         <h2 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--color-primary)' }}>
-          {b.company ? `חברת ${b.company}` : 'חשבון כללי'}
+          {b.company ? `חברת ${b.company}` : 'חשבון כללי'}{b.branch ? ` · סניף ${b.branch}` : ''}
           <span className="sub" style={{ fontWeight: 400, marginInlineStart: 10 }}>
             לקוח {cust}{b.name ? ` — ${b.name}` : ''}
           </span>
