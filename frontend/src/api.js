@@ -43,6 +43,10 @@ export const api = {
   deleteLink: (email) => post('/api/admin/links/delete', { email }),
   priorityCustomers: () => req('/api/admin/priority/customers'),
   priorityAccounts: () => req('/api/admin/priority/accounts'),
+  // ניהול מערכת — משתמשים מורשים ותפקידים (shared-auth)
+  authUsers: () => req('/auth/users'),
+  saveUser: (body) => post('/auth/users', body),
+  deleteUser: (email) => post('/auth/users/delete', { email }),
 }
 
 // עיצוב מספרים — מפריד אלפים, שליליים באדום בסוגריים (כמו בדוחות הנהח"ש)

@@ -33,7 +33,14 @@ export default function Header({ me, view, setView, customers, selected, setSele
           {me?.is_admin && (
             <button className={view === 'admin' ? 'active' : ''} onClick={() => setView('admin')}>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                <TactIcon name="users" size={16} /> ניהול
+                <TactIcon name="clients" size={16} /> שיוך לקוחות
+              </span>
+            </button>
+          )}
+          {me?.is_admin && (
+            <button className={view === 'sysadmin' ? 'active' : ''} onClick={() => setView('sysadmin')}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                <TactIcon name="server" size={16} /> ניהול מערכת
               </span>
             </button>
           )}
@@ -41,7 +48,7 @@ export default function Header({ me, view, setView, customers, selected, setSele
       </div>
 
       <div className="topbar-side">
-        {me?.is_admin && view !== 'admin' && (
+        {me?.is_admin && (view === 'invoices' || view === 'ledger') && (
           <div className="cust-picker">
             <TactIcon name="clients" size={16} />
             <select value={selected || ''} onChange={(e) => setSelected(e.target.value)}>

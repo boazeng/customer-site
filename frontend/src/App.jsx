@@ -4,6 +4,7 @@ import Header from './components/Header.jsx'
 import Invoices from './pages/Invoices.jsx'
 import Ledger from './pages/Ledger.jsx'
 import Admin from './pages/Admin.jsx'
+import SysAdmin from './pages/SysAdmin.jsx'
 
 export default function App() {
   const [me, setMe] = useState(null)
@@ -52,7 +53,10 @@ export default function App() {
           {view === 'admin' && me.is_admin && (
             <Admin links={links} reload={() => api.adminLinks().then((d) => setLinks(d.links))} />
           )}
-          {view !== 'admin' && <ActiveView view={view} ctx={ctx} isAdmin={me.is_admin} />}
+          {view === 'sysadmin' && me.is_admin && <SysAdmin me={me} />}
+          {(view === 'invoices' || view === 'ledger') && (
+            <ActiveView view={view} ctx={ctx} isAdmin={me.is_admin} />
+          )}
         </div>
       </main>
     </div>
