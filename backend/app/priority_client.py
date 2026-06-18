@@ -43,20 +43,22 @@ class PriorityClient:
         self._lock = threading.Lock()
 
     # ---------- תשתית ----------
-    def _get(self, path: str, params: dict | None = None) -> dict:
+    def _get(self, path: str, params: dict | None = None, retries: int = 3) -> dict:
         url = f"{self.base_url}/{path.lstrip('/')}"
         # Accept-Encoding: identity — תשובות גדולות (PDF ב-base64) נקטעות עם chunked+gzip
         # ("incomplete chunked read"); בלי דחיסה + ניסיון חוזר זה יציב.
+        # retries=1 לניסיון בודד מהיר (משמש במירוץ המקבילי של שליפת ה-PDF).
         headers = {"Accept": "application/json", "Accept-Encoding": "identity"}
         last = None
-        for attempt in range(3):
+        for attempt in range(max(1, retries)):
             try:
                 r = httpx.get(url, params=params or {}, auth=self._auth,
                               headers=headers, timeout=self._timeout)
                 break
             except httpx.RemoteProtocolError as exc:
                 last = exc
-                time.sleep(0.4)
+                if attempt + 1 < retries:
+                    time.sleep(0.4)
             except httpx.HTTPError as exc:
                 raise PriorityError(f"שגיאת רשת מול Priority: {exc}", 504) from exc
         else:
@@ -184,10 +186,20 @@ class PriorityClient:
         entities = ([source] if source in self._INVOICE_ENTITIES
                     else list(self._INVOICE_ENTITIES))
 
-        def extract(d):
+        NO_PDF = object()   # החשבונית נמצאה אך אין לה מסמך PDF
+
+        def attempt(entity):
+            """ניסיון בודד מהיר (fast-fail) מול ישות. מחזיר bytes / NO_PDF / None."""
+            d = self._get(entity, {
+                "$filter": f"IVNUM eq '{self._q(ivnum)}'",
+                "$select": "IVNUM,CUSTNAME",
+                "$expand": "EXTFILES_SUBFORM",
+            }, retries=1)
+            invoice_here = False
             for inv in d.get("value", []):
                 if (inv.get("CUSTNAME") or "").strip() != custname:
                     continue  # אבטחה — רק חשבונית של הלקוח המבוקש
+                invoice_here = True
                 for f in inv.get("EXTFILES_SUBFORM", []) or []:
                     name = f.get("EXTFILENAME") or ""
                     if name.startswith("data:application/pdf") and "," in name:
@@ -197,38 +209,32 @@ class PriorityClient:
                             continue
                         if pdf[:4] == b"%PDF":
                             return pdf
-            return None
+            return NO_PDF if invoice_here else None
 
-        # עד 5 ניסיונות על קטיעת-רשת (504/502), עם השהייה קצרה גוברת בין ניסיונות.
+        # בקשה אחת בכל פעם, עד 3 ניסיונות. השרת קוטע תשובות גדולות באקראי —
+        # אם נקטע (504) מנסים שוב בזה אחר זה (לא במקביל, עומס מינימלי).
         last_err = None
-        for attempt in range(5):
-            found_invoice = False
+        for _attempt in range(3):
+            definitive_no_pdf = False
             for entity in entities:
                 try:
-                    d = self._get(entity, {
-                        "$filter": f"IVNUM eq '{self._q(ivnum)}'",
-                        "$select": "IVNUM,CUSTNAME",
-                        "$expand": "EXTFILES_SUBFORM",
-                    })
+                    res = attempt(entity)
                 except PriorityError as exc:
-                    if exc.status == 404:
-                        continue          # לא בישות הזו — ננסה את הבאה
                     if exc.status in (502, 504):
-                        last_err = exc     # קטיעת רשת — ננסה שוב (backoff)
-                        break
+                        last_err = exc      # קטיעת רשת — ננסה שוב בסבב הבא
+                        continue
+                    if exc.status == 404:
+                        continue            # לא בישות הזו
                     raise
-                found_invoice = True
-                pdf = extract(d)
-                if pdf:
-                    return pdf, f"invoice-{ivnum}.pdf"
-            else:
-                # עברנו על כל הישויות ללא קטיעת-רשת — אין PDF
-                if found_invoice or not last_err:
-                    raise PriorityError("לא נמצא קובץ PDF לחשבונית זו", 404)
-            time.sleep(0.3 * (attempt + 1))
-
+                if res is NO_PDF:
+                    definitive_no_pdf = True
+                elif res is not None:
+                    return res, f"invoice-{ivnum}.pdf"
+            if definitive_no_pdf:
+                break  # תשובה תקינה אך ללא PDF — אין טעם לחזור
+            if _attempt < 2:
+                time.sleep(0.3)
         raise (last_err or PriorityError("לא נמצא קובץ PDF לחשבונית זו", 404))
-        return self._cached(f"pdf:{source}:{custname}:{ivnum}", run)
 
     # ---------- פרטי לקוח ----------
     def get_customer(self, custname: str) -> dict:
