@@ -211,10 +211,11 @@ class PriorityClient:
                             return pdf
             return NO_PDF if invoice_here else None
 
-        # בקשה אחת בכל פעם, עד 3 ניסיונות. השרת קוטע תשובות גדולות באקראי —
+        # בקשה אחת בכל פעם, עד 10 ניסיונות. השרת קוטע תשובות גדולות באקראי —
         # אם נקטע (504) מנסים שוב בזה אחר זה (לא במקביל, עומס מינימלי).
+        ATTEMPTS = 10
         last_err = None
-        for _attempt in range(3):
+        for _attempt in range(ATTEMPTS):
             definitive_no_pdf = False
             for entity in entities:
                 try:
@@ -232,8 +233,8 @@ class PriorityClient:
                     return res, f"invoice-{ivnum}.pdf"
             if definitive_no_pdf:
                 break  # תשובה תקינה אך ללא PDF — אין טעם לחזור
-            if _attempt < 2:
-                time.sleep(0.3)
+            if _attempt < ATTEMPTS - 1:
+                time.sleep(0.25)
         raise (last_err or PriorityError("לא נמצא קובץ PDF לחשבונית זו", 404))
 
     # ---------- פרטי לקוח ----------
