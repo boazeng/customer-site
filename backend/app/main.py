@@ -4,6 +4,8 @@
 ומגיש את ה-SPA הבנוי (frontend/dist) ב-production.
 """
 import logging
+import os
+from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -58,6 +60,16 @@ if settings.dev_login_enabled:
 @app.get("/healthz", include_in_schema=False)
 async def healthz():
     return {"ok": True, "priority_env": settings.priority_env}
+
+
+# ---------------- אפליקציית המובייל (PWA) — מוגשת תחת /m ----------------
+# אפליקציה עצמאית (mobile/) הבנויה עם base=/m/. מוגשת מאותו מקור כדי שעוגיות
+# האימות יעבדו. ניתן למקם בעתיד בתת-דומיין נפרד. חייב לבוא לפני ה-catch-all.
+_mobile_dist = Path(os.getenv(
+    "MOBILE_DIST", str(Path(__file__).resolve().parents[2] / "mobile" / "dist")))
+if (_mobile_dist / "index.html").exists():
+    app.mount("/m", StaticFiles(directory=_mobile_dist, html=True), name="mobile")
+    log.info("אפליקציית מובייל מוגשת תחת /m (%s)", _mobile_dist)
 
 
 # ---------------- הגשת ה-SPA הבנוי ----------------

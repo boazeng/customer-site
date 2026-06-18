@@ -17,7 +17,15 @@ export default function App() {
   })
 
   useEffect(() => {
-    api.me().then(setMe).catch((e) => setErr(e.message))
+    api.me().then((m) => {
+      // לקוח (לא מנהל) במסך צר — מפנים לאפליקציית המובייל
+      const isNarrow = window.matchMedia('(max-width: 768px)').matches
+      if (m && !m.is_admin && isNarrow && window.location.pathname === '/') {
+        window.location.replace('/m/')
+        return
+      }
+      setMe(m)
+    }).catch((e) => setErr(e.message))
   }, [])
 
   // קביעת הלקוח הפעיל מתוך מסך הבחירה — נשמר מקומית ועובר למסך החשבוניות

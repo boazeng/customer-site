@@ -1,0 +1,149 @@
+/* TACT mobile — קומפקטי, קריא, נגיש. RTL/עברית. בנוי על טוקני TACT. */
+@import url('https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap');
+
+:root {
+  --primary: #1F3A5F;
+  --primary-soft: rgba(31, 58, 95, 0.07);
+  --accent: #D64A2E;
+  --pos: #2F8F5B;
+  --ink: #1C1B19;
+  --bg: #FAF9F5;
+  --white: #FFFEFB;
+  --text: #2A2A28;
+  --text-light: #706A60;
+  --cream: #F4F1EA;
+  --border: #E7E2D6;
+  --font: 'Heebo', 'Segoe UI', Tahoma, Arial, sans-serif;
+  --font-en: 'Space Grotesk', 'Heebo', sans-serif;
+  --nav-h: 64px;
+  --safe-b: env(safe-area-inset-bottom, 0px);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html { direction: rtl; }
+body {
+  font-family: var(--font); color: var(--text); background: var(--bg);
+  line-height: 1.5; -webkit-font-smoothing: antialiased;
+  overscroll-behavior-y: contain;
+}
+.num { font-family: var(--font-en); white-space: nowrap; }
+.pos { color: var(--pos); }
+.neg { color: var(--accent); }
+.muted { color: var(--text-light); }
+
+/* ---------- מבנה ---------- */
+.app { min-height: 100dvh; display: flex; flex-direction: column; }
+
+/* סרגל עליון */
+.topbar {
+  position: sticky; top: 0; z-index: 20;
+  background: var(--primary); color: var(--cream);
+  padding: calc(env(safe-area-inset-top, 0px) + 12px) 16px 12px;
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  box-shadow: 0 2px 10px rgba(28,27,25,.16);
+}
+.topbar .brand { display: flex; align-items: baseline; gap: 7px; font-family: var(--font-en); font-weight: 700; font-size: 1.05rem; letter-spacing: 2px; }
+.topbar .brand .dot { color: var(--accent); }
+.topbar .cust { font-size: .82rem; opacity: .92; text-align: left; max-width: 60%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.topbar .cust b { display: block; font-size: .92rem; }
+
+/* תוכן */
+.content { flex: 1; padding: 14px 14px calc(var(--nav-h) + var(--safe-b) + 16px); }
+.page-title { font-size: 1.15rem; font-weight: 800; color: var(--primary); margin: 2px 2px 12px; }
+.page-title small { display:block; font-size:.78rem; font-weight:500; color: var(--text-light); margin-top: 2px; }
+
+/* כרטיס חשבונית */
+.inv-card {
+  background: var(--white); border: 1px solid var(--border); border-radius: 14px;
+  padding: 12px 14px; margin-bottom: 10px; box-shadow: 0 1px 3px rgba(28,27,25,.05);
+}
+.inv-row1 { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.inv-type { font-weight: 700; color: var(--primary); font-size: .95rem; }
+.inv-total { font-family: var(--font-en); font-weight: 700; font-size: 1.05rem; }
+.inv-row2 { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 6px; }
+.inv-meta { font-size: .8rem; color: var(--text-light); }
+.inv-meta .ivnum { font-family: var(--font-en); }
+.inv-details { font-size: .82rem; color: var(--text-light); margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.badge { font-size: .7rem; padding: 2px 8px; border-radius: 999px; background: var(--primary-soft); color: var(--primary); font-weight: 600; white-space: nowrap; }
+
+.btn {
+  font: inherit; font-weight: 600; font-size: .85rem; cursor: pointer;
+  border: 1px solid var(--border); background: var(--white); color: var(--primary);
+  padding: 7px 14px; border-radius: 999px; display: inline-flex; align-items: center; gap: 6px;
+}
+.btn:active { background: var(--primary-soft); }
+.btn-primary { background: var(--primary); color: var(--cream); border-color: var(--primary); }
+.btn:disabled { opacity: .55; }
+
+/* סיכום */
+.summary {
+  display: flex; gap: 10px; margin-bottom: 12px;
+}
+.summary .box {
+  flex: 1; background: var(--white); border: 1px solid var(--border);
+  border-radius: 12px; padding: 10px 12px;
+}
+.summary .label { font-size: .72rem; color: var(--accent); font-weight: 600; }
+.summary .val { font-family: var(--font-en); font-weight: 700; font-size: 1.05rem; margin-top: 2px; }
+
+/* כרטסת — סניף */
+.branch { background: var(--white); border: 1px solid var(--border); border-radius: 14px; margin-bottom: 12px; overflow: hidden; }
+.branch-head {
+  width: 100%; text-align: right; background: var(--primary-soft); border: none;
+  padding: 12px 14px; cursor: pointer; display: flex; align-items: center; gap: 8px;
+}
+.branch-head .ttl { flex: 1; }
+.branch-head .name { font-weight: 700; color: var(--primary); font-size: .92rem; }
+.branch-head .sub { font-size: .76rem; color: var(--text-light); margin-top: 2px; }
+.branch-head .bal { font-family: var(--font-en); font-weight: 700; font-size: .95rem; }
+.branch-head .chev { color: var(--text-light); transition: transform .2s; }
+.branch-head.open .chev { transform: rotate(180deg); }
+
+.ledger-line {
+  padding: 10px 14px; border-top: 1px solid var(--border);
+  display: grid; grid-template-columns: 1fr auto; gap: 2px 10px;
+}
+.ledger-line .l-date { font-family: var(--font-en); font-size: .76rem; color: var(--text-light); }
+.ledger-line .l-type { font-size: .72rem; color: var(--primary); font-weight: 600; }
+.ledger-line .l-details { font-size: .85rem; grid-column: 1 / -1; }
+.ledger-line .l-amt { font-family: var(--font-en); font-size: .9rem; font-weight: 600; text-align: left; }
+.ledger-line .l-run { font-family: var(--font-en); font-size: .74rem; text-align: left; }
+.branch-foot {
+  padding: 10px 14px; border-top: 2px solid var(--border); background: #F5F8FB;
+  display: flex; justify-content: space-between; font-weight: 700; color: var(--primary); font-size: .9rem;
+}
+
+/* ניווט תחתון */
+.tabbar {
+  position: fixed; bottom: 0; right: 0; left: 0; z-index: 20;
+  background: var(--white); border-top: 1px solid var(--border);
+  display: flex; padding-bottom: var(--safe-b);
+  box-shadow: 0 -2px 12px rgba(28,27,25,.07);
+}
+.tabbar button {
+  flex: 1; background: none; border: none; cursor: pointer; font: inherit;
+  padding: 9px 4px; color: var(--text-light); display: flex; flex-direction: column;
+  align-items: center; gap: 3px; height: var(--nav-h);
+}
+.tabbar button .ic { width: 24px; height: 24px; }
+.tabbar button span { font-size: .72rem; font-weight: 600; }
+.tabbar button.active { color: var(--primary); }
+
+/* מצבים */
+.state { text-align: center; padding: 56px 22px; color: var(--text-light); }
+.state h2 { color: var(--primary); font-size: 1.1rem; margin-bottom: 6px; }
+.spinner { width: 30px; height: 30px; border: 3px solid var(--border); border-top-color: var(--primary); border-radius: 50%; margin: 0 auto 14px; animation: spin .9s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.notice { background: rgba(214,74,46,.08); border: 1px solid rgba(214,74,46,.25); color: #9a3115; border-radius: 10px; padding: 12px 14px; font-size: .85rem; }
+.logout { color: var(--cream); opacity: .85; font-size: .8rem; text-decoration: underline; }
+
+/* ---------- הדפסה — מדפיסים את הכרטסת המוצגת בלבד ---------- */
+@media print {
+  .topbar, .tabbar, .btn, .branch-head .chev { display: none !important; }
+  body { background: #fff; }
+  .content { padding: 0; }
+  .branch { border: none; box-shadow: none; page-break-inside: avoid; }
+  .branch-head { background: #fff; padding: 8px 0; }
+  .ledger-line, .branch-foot { padding-left: 0; padding-right: 0; }
+  .inv-card { box-shadow: none; }
+}

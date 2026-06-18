@@ -18,6 +18,7 @@ backend/database/
 # Node / frontend build
 node_modules/
 frontend/dist/
+mobile/dist/
 
 # OS / editor
 .DS_Store

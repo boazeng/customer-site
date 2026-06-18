@@ -1,0 +1,16 @@
+{
+  "name": "TACT · אזור לקוחות",
+  "short_name": "TACT לקוחות",
+  "description": "חשבוניות וכרטסת — אזור הלקוחות",
+  "lang": "he",
+  "dir": "rtl",
+  "start_url": "/m/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FAF9F5",
+  "theme_color": "#1F3A5F",
+  "icons": [
+    { "src": "/m/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
