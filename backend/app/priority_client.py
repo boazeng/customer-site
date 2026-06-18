@@ -111,6 +111,26 @@ class PriorityClient:
                     "email": d.get("EMAIL"), "phone": d.get("PHONE")}
         return self._cached(f"cust:{custname}", run)
 
+    def find_customers_by_email(self, email: str) -> list[dict]:
+        """איתור לקוח/ות לפי שדה EMAIL בכרטיס הלקוח (סינון eq בצד Priority).
+
+        מחזיר רשימה: ריק = לא נמצא; אורך 1 = זיהוי חד-משמעי;
+        יותר מ-1 = אותו מייל מופיע בכמה לקוחות (צריך הכרעה בהמשך).
+        """
+        email = (email or "").strip()
+
+        def run():
+            if not email:
+                return []
+            d = self._get("CUSTOMERS", {
+                "$filter": f"EMAIL eq '{self._q(email)}'",
+                "$select": "CUSTNAME,CUSTDES,EMAIL,PHONE",
+            })
+            return [{"custname": r.get("CUSTNAME"), "name": r.get("CUSTDES"),
+                     "email": r.get("EMAIL"), "phone": r.get("PHONE")}
+                    for r in d.get("value", [])]
+        return self._cached(f"custbyemail:{email.lower()}", run)
+
     def search_customers(self, top: int = 300) -> list[dict]:
         """רשימת לקוחות לבחירה במסך הניהול (סינון בצד הלקוח)."""
         def run():
