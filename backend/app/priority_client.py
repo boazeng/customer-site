@@ -101,41 +101,51 @@ class PriorityClient:
         }
 
     # מקורות חשבוניות הלקוח: כל סוג חשבונית יושב בישות נפרדת ב-Priority.
-    #   AINVOICES=חשבונית מס · EINVOICES=חשבונית מס קבלה · CINVOICES=חשבונית לקוח מרכזת
-    _INVOICE_SOURCES = [
-        ("AINVOICES", "חשבונית מס"),
-        ("EINVOICES", "חשבונית מס קבלה"),
-        ("CINVOICES", "חשבונית לקוח מרכזת"),
-    ]
+    #   AINVOICES=חשבונית מס · EINVOICES=חשבונית מס קבלה
+    #   CINVOICES=מכיל גם חשבונית לקוח מרכזת (DEBIT=D) וגם חשבונית זיכוי (DEBIT=C)
+    _INVOICE_ENTITIES = ("AINVOICES", "EINVOICES", "CINVOICES")
+
+    @staticmethod
+    def _invoice_label(entity: str, debit: str | None) -> str:
+        if entity == "AINVOICES":
+            return "חשבונית מס"
+        if entity == "EINVOICES":
+            return "חשבונית מס קבלה"
+        return "חשבונית זיכוי" if debit == "C" else "חשבונית לקוח מרכזת"
 
     # ---------- חשבוניות ----------
     def get_invoices(self, custname: str) -> list[dict]:
         custname = (custname or "").strip()
 
-        def fetch(entity: str, label: str) -> list[dict]:
+        def fetch(entity: str) -> list[dict]:
             try:
                 data = self._get(entity, {
                     "$filter": f"CUSTNAME eq '{self._q(custname)}'",
-                    "$select": "IVNUM,IVDATE,STATDES,QPRICE,VAT,TOTPRICE,DETAILS",
+                    "$select": "IVNUM,IVDATE,STATDES,DEBIT,QPRICE,VAT,TOTPRICE,DETAILS",
                     "$orderby": "IVDATE desc",
                 })
             except PriorityError:
                 return []  # ישות לא זמינה/חסומה — מדלגים, לא מפילים את כל הרשימה
-            return [{
-                "ivnum": r.get("IVNUM"),
-                "date": (r.get("IVDATE") or "")[:10],
-                "type": label,
-                "status": r.get("STATDES"),
-                "before_vat": _num(r.get("QPRICE")),
-                "vat": _num(r.get("VAT")),
-                "total": _num(r.get("TOTPRICE")),
-                "details": r.get("DETAILS") or "",
-            } for r in data.get("value", [])]
+            out = []
+            for r in data.get("value", []):
+                if r.get("STATDES") != "סופית":
+                    continue  # מציגים רק חשבוניות בסטטוס סופית (לא טיוטא/מבוטלת)
+                out.append({
+                    "ivnum": r.get("IVNUM"),
+                    "date": (r.get("IVDATE") or "")[:10],
+                    "type": self._invoice_label(entity, r.get("DEBIT")),
+                    "status": r.get("STATDES"),
+                    "before_vat": _num(r.get("QPRICE")),
+                    "vat": _num(r.get("VAT")),
+                    "total": _num(r.get("TOTPRICE")),
+                    "details": r.get("DETAILS") or "",
+                })
+            return out
 
         def run():
             from concurrent.futures import ThreadPoolExecutor
-            with ThreadPoolExecutor(max_workers=len(self._INVOICE_SOURCES)) as pool:
-                parts = pool.map(lambda s: fetch(*s), self._INVOICE_SOURCES)
+            with ThreadPoolExecutor(max_workers=len(self._INVOICE_ENTITIES)) as pool:
+                parts = pool.map(fetch, self._INVOICE_ENTITIES)
             rows = [r for part in parts for r in part]
             rows.sort(key=lambda r: r["date"], reverse=True)
             return rows
