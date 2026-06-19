@@ -69,7 +69,7 @@ export function fmtMoney(n) {
 }
 
 // מסך הטעינה בלשונית החדשה של החשבונית — פונט גדול + כפתור ביטול (סוגר את החלון)
-export const INVOICE_LOADING_HTML = `<!doctype html><html dir="rtl" lang="he"><head><meta charset="utf-8"><title>חשבונית בטעינה…</title></head><body style="font-family:Heebo,Arial,sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;height:88vh;text-align:center;color:#1F3A5F"><div style="font-size:1.5rem;font-weight:800">חשבונית בטעינה…</div><div style="font-size:1.5rem;font-weight:500;color:#706A60;margin-top:14px">התהליך עשוי לקחת עד כחצי דקה</div><button onclick="window.close()" style="margin-top:30px;font-family:Heebo,Arial,sans-serif;font-size:1.5rem;font-weight:600;background:#fff;color:#1F3A5F;border:1px solid #E7E2D6;padding:11px 40px;border-radius:999px;cursor:pointer">ביטול</button></body></html>`
+export const INVOICE_LOADING_HTML = `<!doctype html><html dir="rtl" lang="he"><head><meta charset="utf-8"><title>חשבונית בטעינה…</title></head><body style="font-family:Heebo,Arial,sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;height:88vh;text-align:center;color:#1F3A5F"><div style="font-size:1.5rem;font-weight:800">חשבונית בטעינה…</div><div style="font-size:1.2rem;font-weight:500;color:#706A60;margin-top:14px">התהליך עשוי לקחת עד כחצי דקה</div><button onclick="window.close()" style="margin-top:30px;font-family:Heebo,Arial,sans-serif;font-size:1.5rem;font-weight:600;background:#fff;color:#1F3A5F;border:1px solid #E7E2D6;padding:11px 40px;border-radius:999px;cursor:pointer">ביטול</button></body></html>`
 
 const _esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 
