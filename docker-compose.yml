@@ -11,11 +11,11 @@ services:
       - .env
     environment:
       # כתובת אפליקציית המובייל — לקוח (לא מנהל) במסך צר יופנה לכאן
-      - MOBILE_PUBLIC_URL=https://m.newavera.co.il
+      - MOBILE_PUBLIC_URL=https://customer-m.newavera.co.il
     volumes:
       - ./database:/app/database  # auth.db שורד restart
 
-  # אפליקציית המובייל — m.newavera.co.il (פורט 8095), אותה image, הגשה בשורש
+  # אפליקציית המובייל — customer-m.newavera.co.il (פורט 8095), אותה image, הגשה בשורש
   customer-mobile:
     image: customer-site:latest
     container_name: customer-mobile
@@ -28,6 +28,6 @@ services:
       - .env
     environment:
       - APP_MODE=mobile          # מגיש את אפליקציית המובייל בשורש (לא דסקטופ)
-      - CUSTOMER_SITE_REDIRECT_URI=https://m.newavera.co.il/auth/callback
+      - CUSTOMER_SITE_REDIRECT_URI=https://customer-m.newavera.co.il/auth/callback
     volumes:
       - ./database:/app/database  # אותם משתמשים מורשים (עוגיית session host-only — מבודדת בין הדומיינים)
