@@ -98,10 +98,18 @@ curl -s -o /dev/null -w "%{http_code}\n" https://customer.newavera.co.il/healthz
        service: http://localhost:8095
    ```
    ואז: `cloudflared tunnel ingress validate` + restart של ה-service (כמו בסעיף 2).
-3. **Google OAuth** → Authorized redirect URIs → הוסף:
+3. **Google OAuth (client נפרד למובייל):** ב-OAuth client הייעודי של תת-הדומיין →
+   Authorized redirect URIs → הוסף:
    ```
    https://customer-m.newavera.co.il/auth/callback
    ```
+   ואת ה-Client ID + Secret של אותו client הוסף ל-`.env` (במק, **לא ב-git**):
+   ```dotenv
+   MOBILE_GOOGLE_OAUTH_CLIENT_ID=<client id של המובייל>
+   MOBILE_GOOGLE_OAUTH_CLIENT_SECRET=<client secret של המובייל>
+   ```
+   (ה-compose דורס איתם את `GOOGLE_OAUTH_*` עבור container המובייל בלבד; הדסקטופ ממשיך
+   עם ה-client הקיים שב-`.env`.)
 4. **פריסה:** `~/.orbstack/bin/docker compose up -d --build` (מקים את שני ה-containers).
    בדיקה:
    ```bash

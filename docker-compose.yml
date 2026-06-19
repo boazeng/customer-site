@@ -29,5 +29,9 @@ services:
     environment:
       - APP_MODE=mobile          # מגיש את אפליקציית המובייל בשורש (לא דסקטופ)
       - CUSTOMER_SITE_REDIRECT_URI=https://customer-m.newavera.co.il/auth/callback
+      # client נפרד ל-Google OAuth של תת-הדומיין. הערכים מוגדרים ב-.env (לא ב-git),
+      # ודורסים את GOOGLE_OAUTH_* שמגיעים מ-env_file רק עבור container זה.
+      - GOOGLE_OAUTH_CLIENT_ID=${MOBILE_GOOGLE_OAUTH_CLIENT_ID}
+      - GOOGLE_OAUTH_CLIENT_SECRET=${MOBILE_GOOGLE_OAUTH_CLIENT_SECRET}
     volumes:
       - ./database:/app/database  # אותם משתמשים מורשים (עוגיית session host-only — מבודדת בין הדומיינים)
