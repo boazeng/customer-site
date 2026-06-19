@@ -6,7 +6,7 @@ const priority = require('priority-web-sdk')
 const CFG = {
   url: process.env.PRIORITY_SDK_URL || 'https://p.priority-connect.online/wcf/service.svc',
   tabulaini: process.env.PRIORITY_SDK_TABULAINI || 'tabz0qun.ini',
-  language: parseInt(process.env.PRIORITY_SDK_LANG || '2', 10),
+  language: parseInt(process.env.PRIORITY_SDK_LANG || '1', 10),   // 1=עברית
   profile: { company: process.env.PRIORITY_SDK_COMPANY || 'ebyael' },
   appname: process.env.PRIORITY_SDK_APPNAME || 'tact-customer',
   username: process.env.PRIORITY_SDK_TOKEN,   // טוקן REST (רישיון API)

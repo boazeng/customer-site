@@ -51,4 +51,4 @@ services:
       - PRIORITY_SDK_URL=https://p.priority-connect.online/wcf/service.svc
       - PRIORITY_SDK_TABULAINI=tabz0qun.ini
       - PRIORITY_SDK_COMPANY=ebyael
-      - PRIORITY_SDK_LANG=2
+      - PRIORITY_SDK_LANG=1   # 1=עברית (המסמכים מודפסים בשפת ה-session)
