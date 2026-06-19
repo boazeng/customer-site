@@ -15,11 +15,12 @@ const CFG = {
 }
 const COMPANY = CFG.profile.company
 const PORT = parseInt(process.env.PORT || '3001', 10)
-// מיפוי סוג חשבונית (entity) → פרוצדורת הדפסה ב-Priority
+// מיפוי סוג חשבונית (entity) → פרוצדורת הדפסה ב-Priority (WWWSHOW<אות>IV)
+//   A=חשבונית מס · E=חשבונית מס קבלה · C=חשבונית לקוח מרכזת/זיכוי
 const PROC_BY_SOURCE = {
-  AINVOICES: 'WWWSHOWAIV',
-  EINVOICES: process.env.PROC_EINVOICES || 'WWWSHOWAIV',
-  CINVOICES: process.env.PROC_CINVOICES || 'WWWSHOWAIV',
+  AINVOICES: process.env.PROC_AINVOICES || 'WWWSHOWAIV',
+  EINVOICES: process.env.PROC_EINVOICES || 'WWWSHOWEIV',
+  CINVOICES: process.env.PROC_CINVOICES || 'WWWSHOWCIV',
 }
 
 let loggedIn = false
