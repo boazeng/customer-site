@@ -110,7 +110,7 @@ export function buildLedgerHtml(data) {
     .neg{color:#D64A2E} .pos{color:#2F8F5B}
     tfoot td{font-weight:700;border-top:2px solid #cfd6e2;color:#1F3A5F;background:#f6f8fb}
     .grand{margin-top:14px;font-weight:800;color:#1F3A5F;font-size:1.05rem}
-    .toolbar{margin-bottom:16px;display:flex;gap:10px} .toolbar button{font:inherit;font-weight:600;background:#1F3A5F;color:#fff;border:none;padding:9px 20px;border-radius:999px;cursor:pointer}
+    .toolbar{margin-bottom:18px;display:flex;gap:12px} .toolbar button{font-family:inherit;font-weight:700;font-size:1.4rem;background:#1F3A5F;color:#fff;border:none;padding:13px 38px;border-radius:999px;cursor:pointer}
     .toolbar .sec{background:#fff;color:#1F3A5F;border:1px solid #E7E2D6}
     @media print{body{padding:0} .toolbar{display:none}}
   </style></head><body>
