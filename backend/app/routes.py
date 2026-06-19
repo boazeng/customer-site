@@ -11,7 +11,8 @@ from fastapi.responses import Response
 from .priority_client import PriorityClient, PriorityError
 
 
-def build_router(priority: PriorityClient, current_user, require_role) -> APIRouter:
+def build_router(priority: PriorityClient, current_user, require_role,
+                 mobile_url: str = "") -> APIRouter:
     router = APIRouter(prefix="/api")
     admin_only = Depends(require_role("admin"))
 
@@ -58,6 +59,7 @@ def build_router(priority: PriorityClient, current_user, require_role) -> APIRou
                 "custname": c["custname"],
                 "display_name": c["name"] or c["custname"],
             },
+            "mobile_url": mobile_url,   # כתובת אפליקציית המובייל (להפניית לקוח ממסך צר)
         }
 
     # ---------------- חשבוניות ----------------

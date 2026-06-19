@@ -86,6 +86,34 @@ curl -s -o /dev/null -w "%{http_code}\n" https://customer.newavera.co.il/healthz
    content-type `application/json`, push event.
 3. מעכשיו `git push` ל-`main` → פריסה תוך ~30ש'. לוג: `tail ~/server/deployer/deploy.log`.
 
+## 7. תת-דומיין למובייל — m.newavera.co.il (אפליקציית PWA)
+אפליקציית המובייל רצה כ-**container שני** (`customer-mobile`, פורט **8095**) מאותו image,
+עם `APP_MODE=mobile` (מגיש את האפליקציה בשורש) והתחברות עצמאית על המארח `m.newavera.co.il`.
+
+1. **DNS (Cloudflare):** Add record → `CNAME`, Name=`m`,
+   Target=`ae8d8404-c382-475e-a31d-ad5ee34387e1.cfargotunnel.com`, Proxy=🟠 Proxied.
+2. **Tunnel ingress** (`~/.cloudflared/config.yml`), הוסף **לפני** ה-catch-all 404:
+   ```yaml
+     - hostname: m.newavera.co.il
+       service: http://localhost:8095
+   ```
+   ואז: `cloudflared tunnel ingress validate` + restart של ה-service (כמו בסעיף 2).
+3. **Google OAuth** → Authorized redirect URIs → הוסף:
+   ```
+   https://m.newavera.co.il/auth/callback
+   ```
+4. **פריסה:** `~/.orbstack/bin/docker compose up -d --build` (מקים את שני ה-containers).
+   בדיקה:
+   ```bash
+   curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:8095/healthz     # 200
+   curl -s -o /dev/null -w "%{http_code}\n" https://m.newavera.co.il/healthz   # 200
+   ```
+5. **בנייד:** פתח https://m.newavera.co.il → כניסת Google → תפריט הדפדפן → "הוספה למסך הבית".
+
+> הערה: `customer.newavera.co.il` (דסקטופ) מפנה לקוח (לא-מנהל) במסך צר אוטומטית ל-`m.newavera.co.il`
+> (נשלט ע"י `MOBILE_PUBLIC_URL` ב-compose). ההתחברות נפרדת לכל מארח (עוגייה host-only) — מאובטח ומבודד.
+
 ## הערות
 - שקול להפוך את הריפו ל-**Private** (פורטל עסקי). אין בו סודות או נתוני לקוחות (הכל מ-Priority בזמן ריצה).
-- ה-DB (auth.db + links.db) שורד restart דרך ה-volume `./database`.
+- ה-DB (auth.db) שורד restart דרך ה-volume `./database`, ומשותף לשני ה-containers (אותם משתמשים מורשים).
+- זיהוי לקוח נעשה לפי המייל מול Priority (אין מאגר שיוכים מקומי).

@@ -49,7 +49,8 @@ app.add_middleware(
 priority = PriorityClient(settings.priority_base_url, settings.priority_user,
                           settings.priority_password, cache_ttl=settings.priority_cache_ttl)
 
-app.include_router(build_router(priority, current_user, require_role))
+app.include_router(build_router(priority, current_user, require_role,
+                                mobile_url=settings.mobile_public_url))
 
 # כניסה לבדיקות (פיתוח בלבד) — חייב להגיע אחרי האימות ולפני ה-catch-all של ה-SPA
 if settings.dev_login_enabled:
@@ -62,18 +63,17 @@ async def healthz():
     return {"ok": True, "priority_env": settings.priority_env}
 
 
-# ---------------- אפליקציית המובייל (PWA) — מוגשת תחת /m ----------------
-# אפליקציה עצמאית (mobile/) הבנויה עם base=/m/. מוגשת מאותו מקור כדי שעוגיות
-# האימות יעבדו. ניתן למקם בעתיד בתת-דומיין נפרד. חייב לבוא לפני ה-catch-all.
+# ---------------- הגשת ה-SPA הבנוי ----------------
+# שני "פרצופים" לאותו backend, נבחר ע"י APP_MODE:
+#   ברירת מחדל  → מגיש את אתר הדסקטופ (frontend/dist) בשורש.
+#   APP_MODE=mobile → מגיש את אפליקציית המובייל (mobile/dist) בשורש (לתת-דומיין m).
+# שני המצבים חולקים את אותם /api ו-/auth.
 _mobile_dist = Path(os.getenv(
     "MOBILE_DIST", str(Path(__file__).resolve().parents[2] / "mobile" / "dist")))
-if (_mobile_dist / "index.html").exists():
-    app.mount("/m", StaticFiles(directory=_mobile_dist, html=True), name="mobile")
-    log.info("אפליקציית מובייל מוגשת תחת /m (%s)", _mobile_dist)
+_is_mobile = settings.app_mode == "mobile"
+_dist = _mobile_dist if _is_mobile else settings.frontend_dist
+log.info("מצב הגשה: %s (%s)", "mobile" if _is_mobile else "desktop", _dist)
 
-
-# ---------------- הגשת ה-SPA הבנוי ----------------
-_dist = settings.frontend_dist
 if (_dist / "assets").exists():
     app.mount("/assets", StaticFiles(directory=_dist / "assets"), name="assets")
 
@@ -81,11 +81,16 @@ if (_dist / "assets").exists():
 @app.get("/{full_path:path}", include_in_schema=False)
 async def spa(full_path: str, request: Request):
     """כל נתיב שאינו API/אימות — מחזיר את ה-SPA (ניתוב בצד-לקוח)."""
+    # קבצי PWA (manifest/sw/icon) של אפליקציית המובייל יושבים בשורש ה-dist
+    if _is_mobile and full_path in ("manifest.webmanifest", "sw.js", "icon.svg"):
+        f = _dist / full_path
+        if f.exists():
+            return FileResponse(f)
     index = _dist / "index.html"
     if index.exists():
         return FileResponse(index)
     return JSONResponse(
-        {"detail": "ה-frontend עדיין לא נבנה. הריצו 'npm run build' בתיקיית frontend, "
+        {"detail": "ה-frontend עדיין לא נבנה. הריצו 'npm run build', "
                    "או השתמשו בשרת הפיתוח של Vite."},
         status_code=200,
     )

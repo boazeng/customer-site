@@ -1,11 +1,11 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-// base '/m/' — האפליקציה מוגשת תחת /m באותו מקור של ה-API (כדי שעוגיות האימות יעבדו).
-// אם בעתיד נמקם אותה בתת-דומיין נפרד, משנים base ל-'/' ומגדירים CORS+cookie domain.
+// base '/' — האפליקציה מוגשת בשורש של תת-דומיין ייעודי (m.newavera.co.il),
+// מאותו backend (container עם APP_MODE=mobile). אימות עצמאי על אותו מארח.
 // בפיתוח: פרוקסי ל-FastAPI (8000) כך שהדפדפן מדבר באותו מקור.
 export default defineConfig({
-  base: '/m/',
+  base: '/',
   plugins: [react()],
   server: {
     port: 5174,

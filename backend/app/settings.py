@@ -38,6 +38,8 @@ class Settings:
     dev_origins: list[str]
     priority_cache_ttl: int      # שניות מטמון לתשובות Priority
     dev_login_enabled: bool      # מסך "כניסה לבדיקות" (פיתוח בלבד!)
+    app_mode: str                # "" = דסקטופ (ברירת מחדל) | "mobile" = הגשת אפליקציית המובייל בשורש
+    mobile_public_url: str       # כתובת אפליקציית המובייל (להפניית לקוחות ממסך צר); ריק = ללא הפניה
 
     @classmethod
     def load(cls) -> "Settings":
@@ -65,4 +67,6 @@ class Settings:
             priority_cache_ttl=int(os.getenv("PRIORITY_CACHE_TTL", "120")),
             dev_login_enabled=os.getenv("DEV_LOGIN_ENABLED", "true").strip().lower()
             in ("1", "true", "yes"),
+            app_mode=os.getenv("APP_MODE", "").strip().lower(),
+            mobile_public_url=os.getenv("MOBILE_PUBLIC_URL", "").strip().rstrip("/"),
         )

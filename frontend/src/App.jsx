@@ -18,10 +18,10 @@ export default function App() {
 
   useEffect(() => {
     api.me().then((m) => {
-      // לקוח (לא מנהל) במסך צר — מפנים לאפליקציית המובייל
+      // לקוח (לא מנהל) במסך צר — מפנים לאפליקציית המובייל (אם הוגדרה כתובת)
       const isNarrow = window.matchMedia('(max-width: 768px)').matches
-      if (m && !m.is_admin && isNarrow && window.location.pathname === '/') {
-        window.location.replace('/m/')
+      if (m && !m.is_admin && isNarrow && m.mobile_url) {
+        window.location.replace(m.mobile_url)
         return
       }
       setMe(m)
