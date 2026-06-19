@@ -40,11 +40,12 @@ export const api = {
   ledger: (custname) => req('/api/ledger' + (custname ? `?custname=${encodeURIComponent(custname)}` : '')),
   priorityCustomers: () => req('/api/admin/priority/customers'),
   priorityAccounts: () => req('/api/admin/priority/accounts'),
-  // איתור לקוח ב-Priority לפי מייל או מספר לקוח
-  customerLookup: ({ email, custname }) => {
+  // איתור לקוח ב-Priority לפי מייל / מספר לקוח / שם
+  customerLookup: ({ email, custname, name }) => {
     const p = new URLSearchParams()
     if (email) p.set('email', email)
     if (custname) p.set('custname', custname)
+    if (name) p.set('name', name)
     return req('/api/admin/priority/customer-lookup?' + p.toString())
   },
   // ניהול מערכת — משתמשים מורשים ותפקידים (shared-auth)

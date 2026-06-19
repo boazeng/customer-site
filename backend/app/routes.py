@@ -103,15 +103,17 @@ def build_router(priority: PriorityClient, current_user, require_role,
     def priority_customer_lookup(
         email: str | None = Query(None, description="מייל הלקוח לאיתור"),
         custname: str | None = Query(None, description="מספר לקוח לאיתור"),
+        name: str | None = Query(None, description="שם לקוח (חלקי) לאיתור"),
     ):
-        """איתור לקוח ב-Priority לפי מייל או לפי מספר לקוח.
+        """איתור לקוח ב-Priority לפי מייל / מספר לקוח / שם (חלקי).
 
         מחזיר status: none / one / many, יחד עם רשימת הלקוחות שנמצאו.
         """
         email = (email or "").strip()
         custname = (custname or "").strip()
-        if not email and not custname:
-            raise HTTPException(400, "יש להזין מייל או מספר לקוח")
+        name = (name or "").strip()
+        if not email and not custname and not name:
+            raise HTTPException(400, "יש להזין מייל, מספר לקוח או שם")
 
         if custname:
             try:
@@ -121,6 +123,8 @@ def build_router(priority: PriorityClient, current_user, require_role,
                     matches = []
                 else:
                     raise
+        elif name:
+            matches = _wrap(lambda: priority.find_customers_by_name(name))
         else:
             matches = _wrap(lambda: priority.find_customers_by_email(email))
 

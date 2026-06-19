@@ -27,11 +27,12 @@ export const api = {
     if (custname) p.set('custname', custname)
     return '/api/invoice-pdf?' + p.toString()
   },
-  // ניהול (admin) — איתור לקוח לפי מייל או מספר לקוח
-  customerLookup: ({ email, custname }) => {
+  // ניהול (admin) — איתור לקוח לפי מייל / מספר לקוח / שם
+  customerLookup: ({ email, custname, name }) => {
     const p = new URLSearchParams()
     if (email) p.set('email', email)
     if (custname) p.set('custname', custname)
+    if (name) p.set('name', name)
     return req('/api/admin/priority/customer-lookup?' + p.toString())
   },
 }
@@ -54,7 +55,7 @@ export function fmtMoney(n) {
 export async function openInvoicePdf({ ivnum, source, custname }, onBusy) {
   onBusy?.(true)
   const win = window.open('', '_blank')
-  if (win) win.document.write('<p style="font-family:sans-serif;padding:24px">טוען חשבונית…</p>')
+  if (win) win.document.write(`<!doctype html><html dir="rtl" lang="he"><head><meta charset="utf-8"><title>טוען חשבונית…</title></head><body style="font-family:Heebo,Arial,sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;height:88vh;text-align:center;color:#1F3A5F"><div style="font-size:1.7rem;font-weight:700">טוען חשבונית…</div><div style="font-size:1.05rem;color:#706A60;margin-top:14px">התהליך עשוי לקחת עד כחצי דקה</div></body></html>`)
   try {
     const res = await fetch(api.invoicePdfUrl({ ivnum, source, custname }), { credentials: 'include' })
     if (!res.ok) {

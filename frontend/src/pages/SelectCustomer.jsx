@@ -4,11 +4,14 @@ import TactIcon from '../components/TactIcon.jsx'
 
 // בחירת לקוח: איתור לפי מייל או לפי מספר לקוח מתוך Priority, והצגת פרטי הלקוח.
 export default function SelectCustomer({ active, onSelectCustomer }) {
-  const [mode, setMode] = useState('email')   // 'email' | 'custname'
+  const [mode, setMode] = useState('email')   // 'email' | 'custname' | 'name'
   const [value, setValue] = useState('')
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState(null)  // { status, count, customers }
   const [err, setErr] = useState('')
+
+  const LABEL = { email: 'מייל', custname: 'מספר לקוח', name: 'שם' }
+  const PH = { email: 'customer@example.com', custname: 'לדוגמה: 50003', name: 'חלק משם הלקוח' }
 
   async function search(e) {
     e?.preventDefault()
@@ -16,7 +19,7 @@ export default function SelectCustomer({ active, onSelectCustomer }) {
     if (!v) return
     setErr(''); setResult(null); setLoading(true)
     try {
-      const q = mode === 'email' ? { email: v } : { custname: v }
+      const q = { [mode]: v }
       setResult(await api.customerLookup(q))
     } catch (e2) {
       setErr(e2.message)
@@ -29,10 +32,10 @@ export default function SelectCustomer({ active, onSelectCustomer }) {
     <>
       <form onSubmit={search} style={{ marginBottom: 18 }}>
         <div className="tact-nav" style={{ width: 'fit-content', marginBottom: 12 }}>
-          <button type="button" className={mode === 'email' ? 'active' : ''}
-            onClick={() => { setMode('email'); setValue(''); setResult(null); setErr('') }}>לפי מייל</button>
-          <button type="button" className={mode === 'custname' ? 'active' : ''}
-            onClick={() => { setMode('custname'); setValue(''); setResult(null); setErr('') }}>לפי מספר לקוח</button>
+          {['email', 'custname', 'name'].map((m) => (
+            <button key={m} type="button" className={mode === m ? 'active' : ''}
+              onClick={() => { setMode(m); setValue(''); setResult(null); setErr('') }}>לפי {LABEL[m]}</button>
+          ))}
         </div>
 
         <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
@@ -40,7 +43,7 @@ export default function SelectCustomer({ active, onSelectCustomer }) {
             type={mode === 'email' ? 'email' : 'text'}
             value={value}
             onChange={(e) => setValue(e.target.value)}
-            placeholder={mode === 'email' ? 'customer@example.com' : 'לדוגמה: 50003'}
+            placeholder={PH[mode]}
             style={{ width: 280, maxWidth: '100%', fontSize: '.95rem', padding: '8px 12px' }}
             autoFocus
           />
@@ -54,11 +57,11 @@ export default function SelectCustomer({ active, onSelectCustomer }) {
       {loading && <div className="state"><div className="spinner" />מאתר ב-Priority… (הקריאה הראשונה עשויה להימשך עד חצי דקה)</div>}
 
       {!loading && result?.status === 'none' && (
-        <div className="state"><h2>לא נמצא לקוח</h2><p>אין לקוח ב-Priority התואם {mode === 'email' ? 'למייל' : 'למספר'} שהוזן.</p></div>
+        <div className="state"><h2>לא נמצא לקוח</h2><p>אין לקוח ב-Priority התואם ל{LABEL[mode]} שהוזן.</p></div>
       )}
 
       {!loading && result?.status === 'many' && (
-        <div className="sub" style={{ marginBottom: 14 }}>נמצאו {result.count} לקוחות עם אותו מייל — בחר את הלקוח הנכון:</div>
+        <div className="sub" style={{ marginBottom: 14 }}>נמצאו {result.count} לקוחות — בחר את הלקוח הנכון:</div>
       )}
 
       {!loading && result?.customers?.length > 0 && (

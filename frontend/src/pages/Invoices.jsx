@@ -21,7 +21,7 @@ export default function Invoices({ ctx }) {
     setBusy(r.ivnum)
     // פתיחת הלשונית סינכרונית (בתוך לחיצת המשתמש) כדי לא להיחסם ע"י חוסם הקופצים
     const win = window.open('', '_blank')
-    if (win) win.document.write('<p style="font-family:sans-serif;padding:24px">טוען חשבונית…</p>')
+    if (win) win.document.write(`<!doctype html><html dir="rtl" lang="he"><head><meta charset="utf-8"><title>טוען חשבונית…</title></head><body style="font-family:Heebo,Arial,sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;height:88vh;text-align:center;color:#1F3A5F"><div style="font-size:1.7rem;font-weight:700">טוען חשבונית…</div><div style="font-size:1.05rem;color:#706A60;margin-top:14px">התהליך עשוי לקחת עד כחצי דקה</div></body></html>`)
     try {
       const res = await fetch(
         api.invoicePdfUrl({ ivnum: r.ivnum, source: r.source, custname: ctx.custname }),

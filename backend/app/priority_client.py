@@ -243,6 +243,22 @@ class PriorityClient:
                     for r in d.get("value", [])]
         return self._cached(f"custlist:{top}", run)
 
+    def _all_customers(self, top: int = 4000) -> list[dict]:
+        """רשימת לקוחות מלאה (פרטים) לחיפוש לפי שם — OData אינו תומך contains, אז מסננים בקוד."""
+        def run():
+            d = self._get("CUSTOMERS", {
+                "$select": self._CUST_SELECT, "$orderby": "CUSTNAME", "$top": str(top)})
+            return [self._map_customer(r) for r in d.get("value", [])]
+        return self._cached(f"allcust:{top}", run)
+
+    def find_customers_by_name(self, name: str, limit: int = 40) -> list[dict]:
+        """איתור לקוחות ששמם מכיל את הטקסט (סינון בצד השרת על הרשימה המלאה)."""
+        name = (name or "").strip().lower()
+        if not name:
+            return []
+        out = [c for c in self._all_customers() if name in (c.get("name") or "").lower()]
+        return out[:limit]
+
     # ---------- כרטסת לקוח ----------
     # חשבונות הלקוח יושבים ב-ACCOUNTS_RECEIVABLE בשם <מספר-לקוח> ו-<מספר-לקוח>-<סניף>.
     # (FNCCUST — הכרטסת הישירה — חסומה ל-API, ולכן עוברים דרך חשבון החייבים.)

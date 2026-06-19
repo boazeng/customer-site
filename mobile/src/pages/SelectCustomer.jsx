@@ -3,11 +3,13 @@ import { api } from '../api.js'
 
 // ניהול (admin) — איתור לקוח לפי מייל/מספר ובחירתו כלקוח הפעיל לבדיקה.
 export default function SelectCustomer({ active, onSelect }) {
-  const [mode, setMode] = useState('email')   // 'email' | 'custname'
+  const [mode, setMode] = useState('email')   // 'email' | 'custname' | 'name'
   const [value, setValue] = useState('')
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState(null)
   const [err, setErr] = useState('')
+
+  const PH = { email: 'customer@example.com', custname: 'לדוגמה: 50245', name: 'חלק משם הלקוח' }
 
   async function search(e) {
     e?.preventDefault()
@@ -15,7 +17,7 @@ export default function SelectCustomer({ active, onSelect }) {
     if (!v) return
     setErr(''); setResult(null); setLoading(true)
     try {
-      setResult(await api.customerLookup(mode === 'email' ? { email: v } : { custname: v }))
+      setResult(await api.customerLookup({ [mode]: v }))
     } catch (e2) { setErr(e2.message) } finally { setLoading(false) }
   }
 
@@ -33,15 +35,16 @@ export default function SelectCustomer({ active, onSelect }) {
 
       <form onSubmit={search} className="inv-card">
         <div className="seg">
-          <button type="button" className={mode === 'email' ? 'on' : ''}
-            onClick={() => { setMode('email'); setValue(''); setResult(null) }}>לפי מייל</button>
-          <button type="button" className={mode === 'custname' ? 'on' : ''}
-            onClick={() => { setMode('custname'); setValue(''); setResult(null) }}>לפי מספר</button>
+          {[['email', 'מייל'], ['custname', 'מספר'], ['name', 'שם']].map(([m, label]) => (
+            <button key={m} type="button" className={mode === m ? 'on' : ''}
+              onClick={() => { setMode(m); setValue(''); setResult(null) }}>{label}</button>
+          ))}
         </div>
         <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
           <input className="fld" type={mode === 'email' ? 'email' : 'text'} value={value}
-            onChange={(e) => setValue(e.target.value)} inputMode={mode === 'email' ? 'email' : 'numeric'}
-            placeholder={mode === 'email' ? 'customer@example.com' : 'לדוגמה: 50245'} />
+            onChange={(e) => setValue(e.target.value)}
+            inputMode={mode === 'email' ? 'email' : mode === 'custname' ? 'numeric' : 'text'}
+            placeholder={PH[mode]} />
           <button className="btn btn-primary" type="submit" disabled={loading || !value.trim()}>
             {loading ? '…' : 'איתור'}
           </button>

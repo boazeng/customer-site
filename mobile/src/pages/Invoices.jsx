@@ -38,7 +38,7 @@ export default function Invoices({ ctx }) {
             <span className="inv-meta"><span className="ivnum">{r.ivnum}</span> · {fmtDate(r.date)}{r.status ? ` · ${r.status}` : ''}</span>
             <button className="btn btn-primary" disabled={busy === r.ivnum}
               onClick={() => openInvoicePdf({ ivnum: r.ivnum, source: r.source, custname: ctx.custname }, (b) => setBusy(b ? r.ivnum : ''))}>
-              {busy === r.ivnum ? '…' : 'צפייה / הדפסה'}
+              {busy === r.ivnum ? '…' : 'צפייה'}
             </button>
           </div>
         </div>
