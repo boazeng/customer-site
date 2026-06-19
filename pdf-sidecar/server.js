@@ -56,11 +56,13 @@ async function generatePdf(ivnum, procName) {
         // פורמט מועדף: "עם תאור מוצר מורחב" (הרגיל, לא כולל מע"מ/דולר); אחרת Standard; אחרת הראשון.
         // ניתן לעקוף ב-PDF_FORMAT (התאמת מחרוזת בכותרת הפורמט).
         const f = pd.formats || []
+        console.log('formats:', JSON.stringify(f.map((x, i) => ({ i, title: x.title, format: x.format }))))
         const pref = (process.env.PDF_FORMAT || '').trim()
         const fmt = (pref && f.find((x) => (x.title || '').includes(pref)))
           || f.find((x) => /(Extended Part Desc|תאור מוצר מורחב)/i.test(x.title) && !/(VAT|USD|מע|דולר)/i.test(x.title))
           || f.find((x) => /Standard Format/i.test(x.title))
           || f[0]
+        console.log('chosen format:', JSON.stringify({ title: fmt.title, format: fmt.format }))
         pd = await pd.proc.documentOptions(1, fmt.format, 1); break  // pdf=1
       }
       case 'reportOptions':
