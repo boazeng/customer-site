@@ -68,6 +68,9 @@ export function fmtMoney(n) {
   return v < 0 ? `(${abs})` : abs
 }
 
+// מסך הטעינה בלשונית החדשה של החשבונית — פונט גדול + כפתור ביטול (סוגר את החלון)
+export const INVOICE_LOADING_HTML = `<!doctype html><html dir="rtl" lang="he"><head><meta charset="utf-8"><title>חשבונית בטעינה…</title></head><body style="font-family:Heebo,Arial,sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;height:88vh;text-align:center;color:#1F3A5F"><div style="font-size:2.4rem;font-weight:800">חשבונית בטעינה…</div><div style="font-size:1.25rem;color:#706A60;margin-top:16px">התהליך עשוי לקחת עד כחצי דקה</div><button onclick="window.close()" style="margin-top:30px;font-family:Heebo,Arial,sans-serif;font-size:1.1rem;font-weight:600;background:#fff;color:#1F3A5F;border:1px solid #E7E2D6;padding:11px 30px;border-radius:999px;cursor:pointer">ביטול</button></body></html>`
+
 const _esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 
 // בונה מסמך כרטסת (HTML) מהנתונים — מעוצב לצפייה והדפסה, סניף-אחר-סניף.
@@ -107,10 +110,11 @@ export function buildLedgerHtml(data) {
     .neg{color:#D64A2E} .pos{color:#2F8F5B}
     tfoot td{font-weight:700;border-top:2px solid #cfd6e2;color:#1F3A5F;background:#f6f8fb}
     .grand{margin-top:14px;font-weight:800;color:#1F3A5F;font-size:1.05rem}
-    .toolbar{margin-bottom:16px} .toolbar button{font:inherit;font-weight:600;background:#1F3A5F;color:#fff;border:none;padding:9px 20px;border-radius:999px;cursor:pointer}
+    .toolbar{margin-bottom:16px;display:flex;gap:10px} .toolbar button{font:inherit;font-weight:600;background:#1F3A5F;color:#fff;border:none;padding:9px 20px;border-radius:999px;cursor:pointer}
+    .toolbar .sec{background:#fff;color:#1F3A5F;border:1px solid #E7E2D6}
     @media print{body{padding:0} .toolbar{display:none}}
   </style></head><body>
-   <div class="toolbar"><button onclick="window.print()">הדפסה</button></div>
+   <div class="toolbar"><button onclick="window.print()">הדפסה</button><button class="sec" onclick="window.close()">סגירה</button></div>
    <h1>כרטסת</h1>
    <div class="sub">${_esc(data?.display_name || '')} · לקוח ${_esc(data?.custname || '')} · ${branches.length} ${branches.length === 1 ? 'סניף' : 'סניפים'}</div>
    ${body}

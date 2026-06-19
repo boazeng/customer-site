@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { api, fmtMoney, fmtDate } from '../api.js'
+import { api, fmtMoney, fmtDate, INVOICE_LOADING_HTML } from '../api.js'
 import TactIcon from '../components/TactIcon.jsx'
 
 export default function Invoices({ ctx }) {
@@ -21,17 +21,19 @@ export default function Invoices({ ctx }) {
     setBusy(r.ivnum)
     // פתיחת הלשונית סינכרונית (בתוך לחיצת המשתמש) כדי לא להיחסם ע"י חוסם הקופצים
     const win = window.open('', '_blank')
-    if (win) win.document.write(`<!doctype html><html dir="rtl" lang="he"><head><meta charset="utf-8"><title>טוען חשבונית…</title></head><body style="font-family:Heebo,Arial,sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;height:88vh;text-align:center;color:#1F3A5F"><div style="font-size:1.7rem;font-weight:700">טוען חשבונית…</div><div style="font-size:1.05rem;color:#706A60;margin-top:14px">התהליך עשוי לקחת עד כחצי דקה</div></body></html>`)
+    if (win) win.document.write(INVOICE_LOADING_HTML)
     try {
       const res = await fetch(
         api.invoicePdfUrl({ ivnum: r.ivnum, source: r.source, custname: ctx.custname }),
         { credentials: 'include' })
+      if (win && win.closed) return   // המשתמש ביטל/סגר את הלשונית
       if (!res.ok) {
         win?.close()
         alert(res.status === 404 ? 'אין מסמך PDF זמין לחשבונית זו' : 'המסמך אינו זמין כרגע, נסה שוב')
         return
       }
       const url = URL.createObjectURL(await res.blob())
+      if (win && win.closed) { URL.revokeObjectURL(url); return }
       if (win) win.location = url; else window.open(url, '_blank')
       setTimeout(() => URL.revokeObjectURL(url), 60000)  // משחררים אחרי שהצופן נטען
     } catch { win?.close(); alert('שגיאה בטעינת המסמך') } finally { setBusy('') }
