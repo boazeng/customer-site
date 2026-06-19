@@ -30,3 +30,7 @@ Thumbs.db
 
 # throwaway SDK PoC
 sdk-poc/
+
+# test artifacts
+pdf-sidecar/out.pdf
+*.pdf
