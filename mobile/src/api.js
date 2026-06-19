@@ -27,6 +27,13 @@ export const api = {
     if (custname) p.set('custname', custname)
     return '/api/invoice-pdf?' + p.toString()
   },
+  // ניהול (admin) — איתור לקוח לפי מייל או מספר לקוח
+  customerLookup: ({ email, custname }) => {
+    const p = new URLSearchParams()
+    if (email) p.set('email', email)
+    if (custname) p.set('custname', custname)
+    return req('/api/admin/priority/customer-lookup?' + p.toString())
+  },
 }
 
 // תאריך תמיד dd-mm-yyyy (הקלט yyyy-mm-dd)

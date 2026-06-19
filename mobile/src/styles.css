@@ -42,8 +42,8 @@ body {
   display: flex; align-items: center; justify-content: space-between; gap: 10px;
   box-shadow: 0 2px 10px rgba(28,27,25,.16);
 }
-.topbar .brand { display: flex; align-items: baseline; gap: 7px; font-family: var(--font-en); font-weight: 700; font-size: 1.05rem; letter-spacing: 2px; }
-.topbar .brand .dot { color: var(--accent); }
+.topbar .brand { display: flex; align-items: center; gap: 8px; font-family: var(--font-en); font-weight: 700; font-size: 1.05rem; letter-spacing: 2px; }
+.topbar .brand .role { font-family: var(--font); letter-spacing: 0; font-size: .68rem; font-weight: 600; background: var(--accent); color: #fff; padding: 1px 7px; border-radius: 999px; }
 .topbar .cust { font-size: .82rem; opacity: .92; text-align: left; max-width: 60%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .topbar .cust b { display: block; font-size: .92rem; }
 
@@ -74,6 +74,14 @@ body {
 .btn:active { background: var(--primary-soft); }
 .btn-primary { background: var(--primary); color: var(--cream); border-color: var(--primary); }
 .btn:disabled { opacity: .55; }
+
+/* טופס ניהול — toggle + שדה */
+.seg { display: inline-flex; border: 1px solid var(--border); border-radius: 999px; overflow: hidden; }
+.seg button { font: inherit; font-size: .82rem; font-weight: 600; border: none; background: var(--white); color: var(--text-light); padding: 6px 14px; cursor: pointer; }
+.seg button.on { background: var(--primary); color: var(--cream); }
+.fld { flex: 1; min-width: 0; font: inherit; font-size: .95rem; padding: 9px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg); color: var(--text); }
+.fld:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-soft); background: #fff; }
+.sub.neg { color: var(--accent); }
 
 /* סיכום */
 .summary {
