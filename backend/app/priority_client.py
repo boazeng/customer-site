@@ -168,74 +168,44 @@ class PriorityClient:
         return self._cached(f"inv:{custname}", run)
 
     # ---------- PDF של חשבונית ----------
-    # ב-Priority ה-PDF הרשמי ("מסמך ממוחשב") נשמר ב-EXTFILES_SUBFORM, כאשר השדה
-    # EXTFILENAME מכיל data:application/pdf;base64,<...>. שולפים, מפענחים, ומחזירים bytes.
+    # ה-PDF מופק על-פי דרישה דרך שירות ה-SDK (pdf-sidecar) שמריץ את WWWSHOWAIV
+    # ב-Priority (כמו "הדפסה והצגה"). אין שמירה — נשלף טרי בכל בקשה.
     def get_invoice_pdf(self, custname: str, ivnum: str, source: str | None = None):
-        """מחזיר (pdf_bytes, filename) לחשבונית של הלקוח. מסונן לפי CUSTNAME (אבטחה).
-
-        שרת Priority נוטה לקטוע תשובות גדולות (ה-PDF ב-base64) — 'incomplete chunked
-        read'. לכן יש ניסיונות חוזרים עם backoff. אין שמירת חשבוניות/PDF במערכת —
-        הקובץ נשלף מ-Priority בכל בקשה ומוחזר ישירות ללקוח, ללא מטמון.
-        """
-        import base64
+        """מחזיר (pdf_bytes, filename). מאמת שהחשבונית שייכת ללקוח, ומפיק דרך ה-sidecar."""
         custname = (custname or "").strip()
         ivnum = (ivnum or "").strip()
         if not custname or not ivnum:
             raise PriorityError("חסר מספר חשבונית או לקוח", 400)
 
+        # 1) אבטחה — מאמתים שהחשבונית אכן שייכת ללקוח, ומזהים את הישות
         entities = ([source] if source in self._INVOICE_ENTITIES
                     else list(self._INVOICE_ENTITIES))
+        owner_source = None
+        for entity in entities:
+            try:
+                d = self._get(entity, {
+                    "$filter": f"IVNUM eq '{self._q(ivnum)}'",
+                    "$select": "IVNUM,CUSTNAME",
+                })
+            except PriorityError:
+                continue
+            if any((r.get("CUSTNAME") or "").strip() == custname for r in d.get("value", [])):
+                owner_source = entity
+                break
+        if not owner_source:
+            raise PriorityError("החשבונית לא נמצאה ללקוח זה", 404)
 
-        NO_PDF = object()   # החשבונית נמצאה אך אין לה מסמך PDF
-
-        def attempt(entity):
-            """ניסיון בודד מהיר (fast-fail) מול ישות. מחזיר bytes / NO_PDF / None."""
-            d = self._get(entity, {
-                "$filter": f"IVNUM eq '{self._q(ivnum)}'",
-                "$select": "IVNUM,CUSTNAME",
-                "$expand": "EXTFILES_SUBFORM",
-            }, retries=1)
-            invoice_here = False
-            for inv in d.get("value", []):
-                if (inv.get("CUSTNAME") or "").strip() != custname:
-                    continue  # אבטחה — רק חשבונית של הלקוח המבוקש
-                invoice_here = True
-                for f in inv.get("EXTFILES_SUBFORM", []) or []:
-                    name = f.get("EXTFILENAME") or ""
-                    if name.startswith("data:application/pdf") and "," in name:
-                        try:
-                            pdf = base64.b64decode(name.split(",", 1)[1])
-                        except (ValueError, TypeError):
-                            continue
-                        if pdf[:4] == b"%PDF":
-                            return pdf
-            return NO_PDF if invoice_here else None
-
-        # בקשה אחת בכל פעם, עד 10 ניסיונות. השרת קוטע תשובות גדולות באקראי —
-        # אם נקטע (504) מנסים שוב בזה אחר זה (לא במקביל, עומס מינימלי).
-        ATTEMPTS = 10
-        last_err = None
-        for _attempt in range(ATTEMPTS):
-            definitive_no_pdf = False
-            for entity in entities:
-                try:
-                    res = attempt(entity)
-                except PriorityError as exc:
-                    if exc.status in (502, 504):
-                        last_err = exc      # קטיעת רשת — ננסה שוב בסבב הבא
-                        continue
-                    if exc.status == 404:
-                        continue            # לא בישות הזו
-                    raise
-                if res is NO_PDF:
-                    definitive_no_pdf = True
-                elif res is not None:
-                    return res, f"invoice-{ivnum}.pdf"
-            if definitive_no_pdf:
-                break  # תשובה תקינה אך ללא PDF — אין טעם לחזור
-            if _attempt < ATTEMPTS - 1:
-                time.sleep(0.25)
-        raise (last_err or PriorityError("לא נמצא קובץ PDF לחשבונית זו", 404))
+        # 2) הפקה דרך ה-sidecar (Web SDK → WWWSHOWAIV)
+        import os
+        base = os.getenv("PDF_SIDECAR_URL", "http://localhost:3001").rstrip("/")
+        try:
+            r = httpx.get(f"{base}/invoice-pdf",
+                          params={"ivnum": ivnum, "source": owner_source}, timeout=90.0)
+        except httpx.HTTPError as exc:
+            raise PriorityError(f"שירות ה-PDF אינו זמין: {exc}", 502) from exc
+        if r.status_code != 200 or r.content[:4] != b"%PDF":
+            raise PriorityError("הפקת ה-PDF נכשלה", 502)
+        return r.content, f"invoice-{ivnum}.pdf"
 
     # ---------- פרטי לקוח ----------
     def get_customer(self, custname: str) -> dict:

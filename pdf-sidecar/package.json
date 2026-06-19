@@ -1,0 +1,12 @@
+{
+  "name": "tact-pdf-sidecar",
+  "private": true,
+  "version": "0.1.0",
+  "description": "שירות Node שמפיק PDF של חשבונית מ-Priority דרך ה-Web SDK (procedure WWWSHOWAIV).",
+  "main": "server.js",
+  "scripts": { "start": "node server.js" },
+  "dependencies": {
+    "express": "^4.21.0",
+    "priority-web-sdk": "^3.0.37"
+  }
+}

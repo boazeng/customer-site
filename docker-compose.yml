@@ -9,9 +9,12 @@ services:
       - "127.0.0.1:8094:8000"   # localhost בלבד — Cloudflare Tunnel מתחבר מקומית
     env_file:
       - .env
+    depends_on:
+      - pdf-sidecar
     environment:
       # כתובת אפליקציית המובייל — לקוח (לא מנהל) במסך צר יופנה לכאן
       - MOBILE_PUBLIC_URL=https://customer-m.newavera.co.il
+      - PDF_SIDECAR_URL=http://pdf-sidecar:3001
     volumes:
       - ./database:/app/database  # auth.db שורד restart
 
@@ -22,6 +25,7 @@ services:
     restart: unless-stopped
     depends_on:
       - customer-site            # מבטיח שה-image נבנה פעם אחת (ע"י השירות הראשון)
+      - pdf-sidecar
     ports:
       - "127.0.0.1:8095:8000"
     env_file:
@@ -29,9 +33,22 @@ services:
     environment:
       - APP_MODE=mobile          # מגיש את אפליקציית המובייל בשורש (לא דסקטופ)
       - CUSTOMER_SITE_REDIRECT_URI=https://customer-m.newavera.co.il/auth/callback
+      - PDF_SIDECAR_URL=http://pdf-sidecar:3001
       # client נפרד ל-Google OAuth של תת-הדומיין. הערכים מוגדרים ב-.env (לא ב-git),
       # ודורסים את GOOGLE_OAUTH_* שמגיעים מ-env_file רק עבור container זה.
       - GOOGLE_OAUTH_CLIENT_ID=${MOBILE_GOOGLE_OAUTH_CLIENT_ID}
       - GOOGLE_OAUTH_CLIENT_SECRET=${MOBILE_GOOGLE_OAUTH_CLIENT_SECRET}
     volumes:
       - ./database:/app/database  # אותם משתמשים מורשים (עוגיית session host-only — מבודדת בין הדומיינים)
+
+  # שירות הפקת PDF — Node + priority-web-sdk (מריץ WWWSHOWAIV). פנימי בלבד (אין port לחוץ).
+  pdf-sidecar:
+    build: ./pdf-sidecar
+    container_name: tact-pdf-sidecar
+    restart: unless-stopped
+    environment:
+      - PRIORITY_SDK_TOKEN=${PRIORITY_SDK_TOKEN}   # טוקן REST (רישיון API) — ב-.env, לא ב-git
+      - PRIORITY_SDK_URL=https://p.priority-connect.online/wcf/service.svc
+      - PRIORITY_SDK_TABULAINI=tabz0qun.ini
+      - PRIORITY_SDK_COMPANY=ebyael
+      - PRIORITY_SDK_LANG=2

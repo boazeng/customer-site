@@ -27,3 +27,6 @@ Thumbs.db
 
 # Claude Code session settings
 .claude/
+
+# throwaway SDK PoC
+sdk-poc/
