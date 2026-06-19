@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { api, fmtMoney, fmtDate } from '../api.js'
+import { api, fmtMoney, fmtDate, openLedgerDoc } from '../api.js'
 import { Loading } from './Invoices.jsx'
 
 export default function Ledger({ ctx }) {
@@ -19,12 +19,6 @@ export default function Ledger({ ctx }) {
       .catch((e) => setErr(e)).finally(() => setLoading(false))
   }, [ctx.custname])
 
-  function printLedger() {
-    const all = {}; (data?.branches || []).forEach((b) => { all[b.accname] = true })
-    setOpen(all)
-    setTimeout(() => window.print(), 120)   // לפתוח הכל ואז להדפיס
-  }
-
   if (loading) return <Loading text="טוען כרטסת…" />
   if (err) return <div className="notice">{err.message}</div>
 
@@ -38,8 +32,8 @@ export default function Ledger({ ctx }) {
       <div className="summary">
         <div className="box"><div className="label">יתרה כוללת</div>
           <div className={'val ' + (data?.balance < 0 ? 'neg' : 'pos')}>₪{fmtMoney(data?.balance)}</div></div>
-        <button className="btn" style={{ alignSelf: 'center' }} onClick={printLedger}
-          disabled={!branches.length}>הדפסת כרטסת</button>
+        <button className="btn" style={{ alignSelf: 'center' }} onClick={() => openLedgerDoc(data)}
+          disabled={!branches.length}>צפייה / הדפסה</button>
       </div>
 
       {branches.length === 0 ? (

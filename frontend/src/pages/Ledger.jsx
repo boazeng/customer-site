@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { api, fmtMoney, fmtDate } from '../api.js'
+import { api, fmtMoney, fmtDate, openLedgerDoc } from '../api.js'
 import { Loading } from './Invoices.jsx'
 
 // קודי סוג-תנועה (FNCPATNAME) → שם מלא. בכרטסת משאירים את הקיצור ומציגים שם מלא ב-tooltip.
@@ -36,6 +36,9 @@ export default function Ledger({ ctx }) {
             {ctx.display_name || data?.display_name} · {branches.length} {branches.length === 1 ? 'סניף' : 'סניפים'}
           </div>
         </div>
+        {branches.length > 0 && (
+          <button className="tact-btn tact-btn-primary" onClick={() => openLedgerDoc(data)}>צפייה / הדפסה</button>
+        )}
       </div>
 
       {branches.length === 0 ? (
