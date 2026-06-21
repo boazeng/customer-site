@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { api, fmtMoney, fmtDate, openLedgerDoc } from '../api.js'
+import { api, fmtMoney, fmtDate, openLedgerDoc, downloadLedgerXlsx } from '../api.js'
 import { Loading } from './Invoices.jsx'
 
 export default function Ledger({ ctx }) {
@@ -32,8 +32,12 @@ export default function Ledger({ ctx }) {
       <div className="summary">
         <div className="box"><div className="label">יתרה כוללת</div>
           <div className={'val ' + (data?.balance < 0 ? 'neg' : 'pos')}>₪{fmtMoney(data?.balance)}</div></div>
-        <button className="btn" style={{ alignSelf: 'center' }} onClick={() => openLedgerDoc(data)}
-          disabled={!branches.length}>צפייה / הדפסה</button>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignSelf: 'center' }}>
+          <button className="btn btn-primary" onClick={() => openLedgerDoc(data)}
+            disabled={!branches.length}>צפייה / הדפסה</button>
+          <button className="btn" onClick={() => downloadLedgerXlsx(data.custname)}
+            disabled={!branches.length}>הורדה לאקסל</button>
+        </div>
       </div>
 
       {branches.length === 0 ? (

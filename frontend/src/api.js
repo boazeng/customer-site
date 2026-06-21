@@ -122,6 +122,19 @@ export function buildLedgerHtml(data) {
   </body></html>`
 }
 
+// הורדת הכרטסת כקובץ אקסל (.xlsx). שולח עוגיות; מוריד דרך blob כדי לתפוס שגיאות.
+export async function downloadLedgerXlsx(custname) {
+  const url = '/api/ledger.xlsx' + (custname ? `?custname=${encodeURIComponent(custname)}` : '')
+  const res = await fetch(url, { credentials: 'include' })
+  if (!res.ok) { alert('הורדת האקסל נכשלה, נסה שוב'); return }
+  const blob = await res.blob()
+  const a = document.createElement('a')
+  a.href = URL.createObjectURL(blob)
+  a.download = `ledger-${custname || 'customer'}.xlsx`
+  document.body.appendChild(a); a.click(); a.remove()
+  setTimeout(() => URL.revokeObjectURL(a.href), 10000)
+}
+
 // פותח את מסמך הכרטסת בלשונית חדשה
 export function openLedgerDoc(data) {
   const win = window.open('', '_blank')

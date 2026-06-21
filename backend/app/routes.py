@@ -9,6 +9,7 @@ from fastapi import APIRouter, Request, Depends, HTTPException, Query
 from fastapi.responses import Response
 
 from .priority_client import PriorityClient, PriorityError
+from .ledger_xlsx import build_ledger_xlsx
 
 
 def build_router(priority: PriorityClient, current_user, require_role,
@@ -93,6 +94,22 @@ def build_router(priority: PriorityClient, current_user, require_role,
         data = _wrap(lambda: priority.get_customer_ledger(cust))
         data["display_name"] = display
         return data
+
+    @router.get("/ledger.xlsx")
+    def ledger_xlsx(request: Request, custname: str | None = Query(None)):
+        """הורדת הכרטסת כקובץ אקסל (.xlsx) — אותם נתונים כמו /ledger."""
+        cust, display, _is_admin = _resolve(request, custname)
+        if not cust:
+            raise HTTPException(400, "לא נבחר לקוח")
+        data = _wrap(lambda: priority.get_customer_ledger(cust))
+        data["display_name"] = display
+        content = build_ledger_xlsx(data)
+        fname = f"ledger-{cust}.xlsx"
+        return Response(
+            content=content,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": f'attachment; filename="{fname}"'},
+        )
 
     # ---------------- ניהול (admin) ----------------
     @router.get("/admin/priority/customers", dependencies=[admin_only])

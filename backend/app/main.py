@@ -81,11 +81,13 @@ if (_dist / "assets").exists():
 @app.get("/{full_path:path}", include_in_schema=False)
 async def spa(full_path: str, request: Request):
     """כל נתיב שאינו API/אימות — מחזיר את ה-SPA (ניתוב בצד-לקוח)."""
-    # קבצי PWA (manifest/sw/icon) של אפליקציית המובייל יושבים בשורש ה-dist
-    if _is_mobile and full_path in ("manifest.webmanifest", "sw.js", "icon.svg"):
-        f = _dist / full_path
-        if f.exists():
-            return FileResponse(f)
+    # קבצים סטטיים שיושבים בשורש ה-dist (favicon.svg, manifest, sw, icon...) —
+    # מגישים את הקובץ האמיתי, אחרת ה-catch-all היה מחזיר index.html והדפדפן לא היה
+    # מקבל את הלוגו/מניפסט. שמירה מפני path traversal: הקובץ חייב להיות בתוך _dist.
+    if full_path:
+        candidate = (_dist / full_path).resolve()
+        if candidate.is_file() and _dist.resolve() in candidate.parents:
+            return FileResponse(candidate)
     index = _dist / "index.html"
     if index.exists():
         return FileResponse(index)
