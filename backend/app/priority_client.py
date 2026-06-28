@@ -371,14 +371,11 @@ class PriorityClient:
         custname = (custname or "").strip()
 
         def run():
-            try:
-                data = self._get("RECEIPTS", {
-                    "$filter": f"CUSTNAME eq '{self._q(custname)}'",
-                    "$select": "ACCNUM,CDATE,STATDES,PAYDES,DETAILS,TOTPRICE",
-                    "$orderby": "CDATE desc",
-                })
-            except PriorityError:
-                return []
+            data = self._get("RECEIPTS", {
+                "$filter": f"CUSTNAME eq '{self._q(custname)}'",
+                "$select": "ACCNUM,CDATE,STATDES,PAYDES,DETAILS,TOTPRICE",
+                "$orderby": "CDATE desc",
+            })
             out = []
             for r in data.get("value", []):
                 out.append({
