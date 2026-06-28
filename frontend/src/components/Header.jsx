@@ -5,6 +5,7 @@ import TactIcon from './TactIcon.jsx'
 const TABS = [
   { key: 'invoices', label: 'חשבוניות', icon: 'invoices' },
   { key: 'ledger', label: 'כרטסת', icon: 'reports' },
+  { key: 'receipts', label: 'קבלות', icon: 'receipt' },
 ]
 
 export default function Header({ me, view, setView, active }) {

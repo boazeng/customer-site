@@ -38,6 +38,7 @@ export const api = {
     return '/api/invoice-pdf?' + p.toString()
   },
   ledger: (custname) => req('/api/ledger' + (custname ? `?custname=${encodeURIComponent(custname)}` : '')),
+  receipts: (custname) => req('/api/receipts' + (custname ? `?custname=${encodeURIComponent(custname)}` : '')),
   priorityCustomers: () => req('/api/admin/priority/customers'),
   priorityAccounts: () => req('/api/admin/priority/accounts'),
   // איתור לקוח ב-Priority לפי מייל / מספר לקוח / שם

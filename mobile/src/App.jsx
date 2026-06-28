@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { api } from './api.js'
 import Invoices from './pages/Invoices.jsx'
 import Ledger from './pages/Ledger.jsx'
+import Receipts from './pages/Receipts.jsx'
 import SelectCustomer from './pages/SelectCustomer.jsx'
 
 // אייקוני קו פשוטים (24x24)
@@ -18,6 +19,9 @@ const IconLedger = () => <Icon d={<>
 const IconAdmin = () => <Icon d={<>
   <circle cx="12" cy="12" r="3.2" />
   <path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5 5l2.1 2.1M16.9 16.9 19 19M19 5l-2.1 2.1M7.1 16.9 5 19" /></>} />
+const IconReceipt = () => <Icon d={<>
+  <path d="M5 2h14v18l-2.5-1.5L14 20l-2 -1.5L10 20l-2.5-1.5L5 20z" />
+  <path d="M9 7h6M9 11h6M9 15h4" /></>} />
 
 const ACTIVE_KEY = 'tact.activeCustomer'
 
@@ -59,6 +63,7 @@ export default function App() {
   const tabs = [
     { key: 'invoices', label: 'חשבוניות', Icon: IconInvoice },
     { key: 'ledger', label: 'כרטסת', Icon: IconLedger },
+    { key: 'receipts', label: 'קבלות', Icon: IconReceipt },
   ]
   if (me.is_admin) tabs.push({ key: 'admin', label: 'ניהול', Icon: IconAdmin })
 
@@ -74,7 +79,7 @@ export default function App() {
                 ? 'עבור ללשונית "ניהול" ובחר לקוח כדי לראות את הנתונים.'
                 : 'כתובת המייל שלך אינה משויכת ללקוח ב-Priority. פנה למנהל החשבון.'}</p>
             </div>
-          ) : tab === 'invoices' ? <Invoices ctx={ctx} /> : <Ledger ctx={ctx} />}
+          ) : tab === 'invoices' ? <Invoices ctx={ctx} /> : tab === 'receipts' ? <Receipts ctx={ctx} /> : <Ledger ctx={ctx} />}
       </main>
 
       <nav className="tabbar">

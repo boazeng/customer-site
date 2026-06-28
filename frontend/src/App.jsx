@@ -3,6 +3,7 @@ import { api } from './api.js'
 import Header from './components/Header.jsx'
 import Invoices from './pages/Invoices.jsx'
 import Ledger from './pages/Ledger.jsx'
+import Receipts from './pages/Receipts.jsx'
 import SysAdmin from './pages/SysAdmin.jsx'
 
 const ACTIVE_KEY = 'tact.activeCustomer'  // הלקוח שהמנהל בחר — נשמר מקומית
@@ -59,7 +60,7 @@ export default function App() {
           {view === 'sysadmin' && me.is_admin && (
             <SysAdmin me={me} active={active} onSelectCustomer={selectCustomer} />
           )}
-          {(view === 'invoices' || view === 'ledger') && (
+          {(view === 'invoices' || view === 'ledger' || view === 'receipts') && (
             <ActiveView view={view} ctx={ctx} isAdmin={me.is_admin} />
           )}
         </div>
@@ -86,5 +87,6 @@ function ActiveView({ view, ctx, isAdmin }) {
     )
   }
   if (view === 'invoices') return <Invoices ctx={ctx} isAdmin={isAdmin} />
+  if (view === 'receipts') return <Receipts ctx={ctx} isAdmin={isAdmin} />
   return <Ledger ctx={ctx} isAdmin={isAdmin} />
 }

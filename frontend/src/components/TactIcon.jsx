@@ -139,6 +139,14 @@ const GLYPHS = {
     </>
   ),
 
+  /* ---- Finance ---- */
+  receipt: (
+    <>
+      <path d="M5 2 H19 V20 L16.5 18.5 L14 20 L11.5 18.5 L9 20 L6.5 18.5 L5 20 Z" />
+      <path d="M9 7 H15 M9 11 H15 M9 15 H12" />
+    </>
+  ),
+
   /* ---- Layout / files ---- */
   document: (
     <>

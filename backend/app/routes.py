@@ -111,6 +111,16 @@ def build_router(priority: PriorityClient, current_user, require_role,
             headers={"Content-Disposition": f'attachment; filename="{fname}"'},
         )
 
+    # ---------------- קבלות ----------------
+    @router.get("/receipts")
+    def receipts(request: Request, custname: str | None = Query(None)):
+        cust, display, _is_admin = _resolve(request, custname)
+        if not cust:
+            raise HTTPException(400, "לא נבחר לקוח")
+        rows = _wrap(lambda: priority.get_receipts(cust))
+        return {"custname": cust, "display_name": display, "receipts": rows,
+                "count": len(rows), "total": round(sum(r["total"] for r in rows), 2)}
+
     # ---------------- ניהול (admin) ----------------
     @router.get("/admin/priority/customers", dependencies=[admin_only])
     def priority_customers():

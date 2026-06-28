@@ -365,6 +365,33 @@ class PriorityClient:
             }
         return self._cached(f"custled:{custname}", run)
 
+    # ---------- קבלות לקוח ----------
+    # קבלות יושבות ב-RECEIPTS ב-Priority (תשלומים שהתקבלו מהלקוח).
+    def get_receipts(self, custname: str) -> list[dict]:
+        custname = (custname or "").strip()
+
+        def run():
+            try:
+                data = self._get("RECEIPTS", {
+                    "$filter": f"CUSTNAME eq '{self._q(custname)}'",
+                    "$select": "ACCNUM,CDATE,STATDES,PAYDES,DETAILS,TOTPRICE",
+                    "$orderby": "CDATE desc",
+                })
+            except PriorityError:
+                return []
+            out = []
+            for r in data.get("value", []):
+                out.append({
+                    "accnum": r.get("ACCNUM"),
+                    "date": (r.get("CDATE") or "")[:10],
+                    "status": r.get("STATDES") or "",
+                    "pay_method": r.get("PAYDES") or "",
+                    "details": r.get("DETAILS") or "",
+                    "total": _num(r.get("TOTPRICE")),
+                })
+            return out
+        return self._cached(f"receipts:{custname}", run)
+
     def search_accounts(self, top: int = 500) -> list[dict]:
         """רשימת חשבונות לבחירת שם-חשבון ללקוח (סינון בצד הלקוח)."""
         def run():
