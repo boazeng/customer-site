@@ -371,7 +371,7 @@ class PriorityClient:
         custname = (custname or "").strip()
 
         def run():
-            data = self._get("RECEIPTS", {
+            data = self._get("PAYED", {
                 "$filter": f"CUSTNAME eq '{self._q(custname)}'",
                 "$select": "ACCNUM,CDATE,STATDES,PAYDES,DETAILS,TOTPRICE",
                 "$orderby": "CDATE desc",
