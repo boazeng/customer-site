@@ -366,26 +366,30 @@ class PriorityClient:
         return self._cached(f"custled:{custname}", run)
 
     # ---------- קבלות לקוח ----------
-    # קבלות יושבות ב-RECEIPTS ב-Priority (תשלומים שהתקבלו מהלקוח).
+    # ישויות ייעודיות (RECEIPTS, PAYED) חסומות ב-Priority — מסננים מהכרטסת:
+    # כל שורה עם זכות > 0 היא תשלום/קבלה שהתקבל מהלקוח.
     def get_receipts(self, custname: str) -> list[dict]:
         custname = (custname or "").strip()
 
         def run():
-            data = self._get("PAYED", {
-                "$filter": f"CUSTNAME eq '{self._q(custname)}'",
-                "$select": "ACCNUM,CDATE,STATDES,PAYDES,DETAILS,TOTPRICE",
-                "$orderby": "CDATE desc",
-            })
+            accounts = self.list_receivable_accounts(custname)
+            from concurrent.futures import ThreadPoolExecutor
+            with ThreadPoolExecutor(max_workers=8) as pool:
+                ledgers = list(pool.map(lambda a: self._account_ledger(a["accname"]), accounts))
             out = []
-            for r in data.get("value", []):
-                out.append({
-                    "accnum": r.get("ACCNUM"),
-                    "date": (r.get("CDATE") or "")[:10],
-                    "status": r.get("STATDES") or "",
-                    "pay_method": r.get("PAYDES") or "",
-                    "details": r.get("DETAILS") or "",
-                    "total": _num(r.get("TOTPRICE")),
-                })
+            for led in ledgers:
+                for line in led["lines"]:
+                    if line["credit"] <= 0:
+                        continue
+                    out.append({
+                        "accnum": line["fncnum"] or line["ivnum"] or "",
+                        "date": line["date"],
+                        "status": "",
+                        "pay_method": line["type"],
+                        "details": line["details"],
+                        "total": line["credit"],
+                    })
+            out.sort(key=lambda r: r["date"], reverse=True)
             return out
         return self._cached(f"receipts:{custname}", run)
 
