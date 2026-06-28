@@ -22,6 +22,11 @@ export const api = {
   invoices: (custname) => req('/api/invoices' + (custname ? `?custname=${encodeURIComponent(custname)}` : '')),
   ledger: (custname) => req('/api/ledger' + (custname ? `?custname=${encodeURIComponent(custname)}` : '')),
   receipts: (custname) => req('/api/receipts' + (custname ? `?custname=${encodeURIComponent(custname)}` : '')),
+  receiptPdfUrl: ({ fncnum, custname }) => {
+    const p = new URLSearchParams({ fncnum })
+    if (custname) p.set('custname', custname)
+    return '/api/receipt-pdf?' + p.toString()
+  },
   invoicePdfUrl: ({ ivnum, source, custname }) => {
     const p = new URLSearchParams({ ivnum })
     if (source) p.set('source', source)

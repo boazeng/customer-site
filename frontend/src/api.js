@@ -39,6 +39,11 @@ export const api = {
   },
   ledger: (custname) => req('/api/ledger' + (custname ? `?custname=${encodeURIComponent(custname)}` : '')),
   receipts: (custname) => req('/api/receipts' + (custname ? `?custname=${encodeURIComponent(custname)}` : '')),
+  receiptPdfUrl: ({ fncnum, custname }) => {
+    const p = new URLSearchParams({ fncnum })
+    if (custname) p.set('custname', custname)
+    return '/api/receipt-pdf?' + p.toString()
+  },
   priorityCustomers: () => req('/api/admin/priority/customers'),
   priorityAccounts: () => req('/api/admin/priority/accounts'),
   // איתור לקוח ב-Priority לפי מייל / מספר לקוח / שם

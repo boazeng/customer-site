@@ -121,6 +121,16 @@ def build_router(priority: PriorityClient, current_user, require_role,
         return {"custname": cust, "display_name": display, "receipts": rows,
                 "count": len(rows), "total": round(sum(r["total"] for r in rows), 2)}
 
+    @router.get("/receipt-pdf")
+    def receipt_pdf(request: Request, fncnum: str = Query(...),
+                    custname: str | None = Query(None)):
+        cust, _display, _is_admin = _resolve(request, custname)
+        if not cust:
+            raise HTTPException(400, "לא נבחר לקוח")
+        pdf, fname = _wrap(lambda: priority.get_receipt_pdf(cust, fncnum))
+        return Response(content=pdf, media_type="application/pdf",
+                        headers={"Content-Disposition": f'inline; filename="{fname}"'})
+
     # ---------------- ניהול (admin) ----------------
     @router.get("/admin/priority/customers", dependencies=[admin_only])
     def priority_customers():

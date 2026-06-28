@@ -1,16 +1,32 @@
 import { useEffect, useState } from 'react'
-import { api, fmtMoney, fmtDate } from '../api.js'
+import { api, fmtMoney, fmtDate, INVOICE_LOADING_HTML } from '../api.js'
 import { Loading } from './Invoices.jsx'
 
 export default function Receipts({ ctx }) {
   const [data, setData] = useState(null)
   const [err, setErr] = useState('')
   const [loading, setLoading] = useState(true)
+  const [busy, setBusy] = useState('')
 
   useEffect(() => {
     setLoading(true); setErr('')
     api.receipts(ctx.custname).then(setData).catch((e) => setErr(e.message)).finally(() => setLoading(false))
   }, [ctx.custname])
+
+  async function viewPdf(r) {
+    setBusy(r.accnum)
+    const win = window.open('', '_blank')
+    if (win) win.document.write(INVOICE_LOADING_HTML)
+    try {
+      const res = await fetch(api.receiptPdfUrl({ fncnum: r.accnum, custname: ctx.custname }), { credentials: 'include' })
+      if (win && win.closed) return
+      if (!res.ok) { win?.close(); alert(res.status === 404 ? 'אין מסמך PDF זמין לקבלה זו' : 'המסמך אינו זמין כרגע, נסה שוב'); return }
+      const url = URL.createObjectURL(await res.blob())
+      if (win && win.closed) { URL.revokeObjectURL(url); return }
+      if (win) win.location = url; else window.open(url, '_blank')
+      setTimeout(() => URL.revokeObjectURL(url), 60000)
+    } catch { win?.close(); alert('שגיאה בטעינת המסמך') } finally { setBusy('') }
+  }
 
   if (loading) return <Loading text="טוען קבלות…" />
   if (err) return <div className="notice">{err}</div>
@@ -38,6 +54,10 @@ export default function Receipts({ ctx }) {
             <span className="inv-meta">
               <span className="ivnum">{r.accnum}</span> · {fmtDate(r.date)}{r.status ? ` · ${r.status}` : ''}
             </span>
+            <button className="btn btn-primary" disabled={busy === r.accnum}
+              onClick={() => viewPdf(r)}>
+              {busy === r.accnum ? '…' : 'צפייה'}
+            </button>
           </div>
         </div>
       ))}

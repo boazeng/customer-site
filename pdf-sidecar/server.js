@@ -22,6 +22,7 @@ const PROC_BY_SOURCE = {
   EINVOICES: process.env.PROC_EINVOICES || 'WWWSHOWEIV',
   CINVOICES: process.env.PROC_CINVOICES || 'WWWSHOWCIV',
 }
+const PROC_RECEIPT = process.env.PROC_RECEIPTS || 'WWWSHOWREC'
 
 let loggedIn = false
 let chain = Promise.resolve()   // serialize SDK access (session יחיד)
@@ -114,6 +115,26 @@ app.get('/invoice-pdf', async (req, res) => {
        .send(pdf)
   } catch (e) {
     console.error('pdf error:', ivnum, String(e && e.message || e))
+    res.status(502).json({ error: String(e && e.message || e) })
+  }
+})
+
+app.get('/receipt-pdf', async (req, res) => {
+  const fncnum = String(req.query.fncnum || '').trim()
+  if (!fncnum) return res.status(400).json({ error: 'missing fncnum' })
+  try {
+    const pdf = await enqueue(async () => {
+      try { return await generatePdf(fncnum, PROC_RECEIPT) }
+      catch (e) {
+        loggedIn = false
+        return await generatePdf(fncnum, PROC_RECEIPT)
+      }
+    })
+    res.set('Content-Type', 'application/pdf')
+       .set('Content-Disposition', `inline; filename="receipt-${fncnum}.pdf"`)
+       .send(pdf)
+  } catch (e) {
+    console.error('receipt pdf error:', fncnum, String(e && e.message || e))
     res.status(502).json({ error: String(e && e.message || e) })
   }
 })
