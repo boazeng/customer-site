@@ -412,7 +412,11 @@ class PriorityClient:
         except httpx.HTTPError as exc:
             raise PriorityError(f"שירות ה-PDF אינו זמין: {exc}", 502) from exc
         if r.status_code != 200 or r.content[:4] != b"%PDF":
-            raise PriorityError("הפקת ה-PDF נכשלה", 502)
+            try:
+                detail = r.json().get("error", "")
+            except Exception:
+                detail = r.text[:200]
+            raise PriorityError(f"הפקת ה-PDF נכשלה: {detail}", 502)
         return r.content, f"receipt-{fncnum}.pdf"
 
     def search_accounts(self, top: int = 500) -> list[dict]:

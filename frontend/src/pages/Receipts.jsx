@@ -28,7 +28,8 @@ export default function Receipts({ ctx }) {
       if (win && win.closed) return
       if (!res.ok) {
         win?.close()
-        alert(res.status === 404 ? 'אין מסמך PDF זמין לקבלה זו' : 'המסמך אינו זמין כרגע, נסה שוב')
+        const body = await res.json().catch(() => ({}))
+        alert(res.status === 404 ? 'אין מסמך PDF זמין לקבלה זו' : (body.detail || 'המסמך אינו זמין כרגע'))
         return
       }
       const url = URL.createObjectURL(await res.blob())
