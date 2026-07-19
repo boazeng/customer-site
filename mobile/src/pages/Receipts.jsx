@@ -18,7 +18,7 @@ export default function Receipts({ ctx }) {
     const win = window.open('', '_blank')
     if (win) win.document.write(INVOICE_LOADING_HTML)
     try {
-      const res = await fetch(api.receiptPdfUrl({ fncnum: r.accnum, custname: ctx.custname }), { credentials: 'include' })
+      const res = await fetch(api.receiptPdfUrl({ accnum: r.accnum, custname: ctx.custname }), { credentials: 'include' })
       if (win && win.closed) return
       if (!res.ok) { win?.close(); const body = await res.json().catch(() => ({})); alert(res.status === 404 ? 'אין מסמך PDF זמין לקבלה זו' : (body.detail || 'המסמך אינו זמין כרגע')); return }
       const url = URL.createObjectURL(await res.blob())

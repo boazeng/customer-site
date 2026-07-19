@@ -23,7 +23,7 @@ export default function Receipts({ ctx }) {
     if (win) win.document.write(INVOICE_LOADING_HTML)
     try {
       const res = await fetch(
-        api.receiptPdfUrl({ fncnum: r.accnum, custname: ctx.custname }),
+        api.receiptPdfUrl({ accnum: r.accnum, custname: ctx.custname }),
         { credentials: 'include' })
       if (win && win.closed) return
       if (!res.ok) {

@@ -122,12 +122,12 @@ def build_router(priority: PriorityClient, current_user, require_role,
                 "count": len(rows), "total": round(sum(r["total"] for r in rows), 2)}
 
     @router.get("/receipt-pdf")
-    def receipt_pdf(request: Request, fncnum: str = Query(...),
+    def receipt_pdf(request: Request, accnum: str = Query(...),
                     custname: str | None = Query(None)):
         cust, _display, _is_admin = _resolve(request, custname)
         if not cust:
             raise HTTPException(400, "לא נבחר לקוח")
-        pdf, fname = _wrap(lambda: priority.get_receipt_pdf(cust, fncnum))
+        pdf, fname = _wrap(lambda: priority.get_receipt_pdf(cust, accnum))
         return Response(content=pdf, media_type="application/pdf",
                         headers={"Content-Disposition": f'inline; filename="{fname}"'})
 
