@@ -381,8 +381,6 @@ class PriorityClient:
                 for line in led["lines"]:
                     if line["credit"] <= 0:
                         continue
-                    if "ארנק" not in (line["type"] or ""):
-                        continue
                     out.append({
                         "accnum": line["fncnum"] or line["ivnum"] or "",
                         "date": line["date"],
