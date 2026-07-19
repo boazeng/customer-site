@@ -22,7 +22,7 @@ const PROC_BY_SOURCE = {
   EINVOICES: process.env.PROC_EINVOICES || 'WWWSHOWEIV',
   CINVOICES: process.env.PROC_CINVOICES || 'WWWSHOWCIV',
 }
-const PROC_RECEIPT = process.env.PROC_RECEIPTS || 'WWWSHOWREC'
+const PROC_RECEIPT = process.env.PROC_RECEIPTS || 'WWWSHOWTIV'
 
 let loggedIn = false
 let chain = Promise.resolve()   // serialize SDK access (session יחיד)
