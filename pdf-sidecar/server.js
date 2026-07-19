@@ -42,7 +42,9 @@ async function generatePdf(ivnum, procName) {
     switch (pd.type) {
       case 'inputFields': {
         if (++inputCount > 1) throw new Error('invoice rejected: ' + (lastMsg || 'not found'))
-        const ret = pd.input.EditFields.map(f => ({
+        console.log('[inputFields] proc=%s fields=%s', procName,
+          JSON.stringify((pd.input?.EditFields || []).map(f => ({ field: f.field, title: f.title, value: f.value }))))
+        const ret = (pd.input?.EditFields || []).map(f => ({
           field: f.field,
           op: f.field === 1 ? 0 : (f.operator || 0),       // 0 = equals (Invoice)
           value: f.field === 1 ? ivnum : (f.value || ''),  // שאר השדות — ערך ברירת מחדל

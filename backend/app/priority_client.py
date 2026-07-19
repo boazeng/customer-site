@@ -381,6 +381,8 @@ class PriorityClient:
                 for line in led["lines"]:
                     if line["credit"] <= 0:
                         continue
+                    if "ארנק" not in (line["details"] or ""):
+                        continue
                     out.append({
                         "accnum": line["ivnum"] or line["fncnum"] or "",
                         "fncnum": line["fncnum"] or "",
@@ -395,26 +397,16 @@ class PriorityClient:
         return self._cached(f"receipts:{custname}", run)
 
     def get_receipt_pdf(self, custname: str, accnum: str):
-        """מחזיר (pdf_bytes, filename). מאמת שהקבלה שייכת ללקוח דרך הכרטסת."""
+        """מחזיר (pdf_bytes, filename). Priority מאמת בעצמו שהמסמך שייך למשתמש המחובר."""
         custname = (custname or "").strip()
         accnum = (accnum or "").strip()
         if not custname or not accnum:
             raise PriorityError("חסר מספר קבלה או לקוח", 400)
 
-        # אימות — מוודאים שה-accnum קיים בתנועות הזכות של הלקוח
-        receipts = self.get_receipts(custname)
-        match = next((r for r in receipts if r["accnum"] == accnum), None)
-        if not match:
-            raise PriorityError("הקבלה לא נמצאה ללקוח זה", 404)
-
-        # מעבירים את מספר הקבלה לפרוצדורה; אם accnum הוא IVNUM — זה מה ש-WWWSHOWREC מצפה לו.
-        # אם accnum הוא FNCNUM (כי IVNUM היה ריק), מנסים גם אותו.
-        doc_num = accnum
-
         import os
         base = os.getenv("PDF_SIDECAR_URL", "http://localhost:3001").rstrip("/")
         try:
-            r = httpx.get(f"{base}/receipt-pdf", params={"fncnum": doc_num}, timeout=90.0)
+            r = httpx.get(f"{base}/receipt-pdf", params={"fncnum": accnum}, timeout=90.0)
         except httpx.HTTPError as exc:
             raise PriorityError(f"שירות ה-PDF אינו זמין: {exc}", 502) from exc
         if r.status_code != 200 or r.content[:4] != b"%PDF":
@@ -423,7 +415,7 @@ class PriorityClient:
             except Exception:
                 detail = r.text[:200]
             raise PriorityError(f"הפקת ה-PDF נכשלה: {detail}", 502)
-        return r.content, f"receipt-{fncnum}.pdf"
+        return r.content, f"receipt-{accnum}.pdf"
 
     def search_accounts(self, top: int = 500) -> list[dict]:
         """רשימת חשבונות לבחירת שם-חשבון ללקוח (סינון בצד הלקוח)."""

@@ -28,8 +28,10 @@ export default function Receipts({ ctx }) {
       if (win && win.closed) return
       if (!res.ok) {
         win?.close()
-        const body = await res.json().catch(() => ({}))
-        alert(`שגיאה ${res.status}: ${body.detail || '(אין פרטים)'}`)
+        const raw = await res.text().catch(() => '')
+        let detail = ''
+        try { detail = JSON.parse(raw)?.detail || '' } catch { detail = raw.slice(0, 300) }
+        alert(`שגיאה ${res.status}: ${detail || '(אין פרטים)'}`)
         return
       }
       const url = URL.createObjectURL(await res.blob())

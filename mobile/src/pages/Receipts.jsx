@@ -20,7 +20,14 @@ export default function Receipts({ ctx }) {
     try {
       const res = await fetch(api.receiptPdfUrl({ accnum: r.accnum, custname: ctx.custname }), { credentials: 'include' })
       if (win && win.closed) return
-      if (!res.ok) { win?.close(); const body = await res.json().catch(() => ({})); alert(res.status === 404 ? 'אין מסמך PDF זמין לקבלה זו' : (body.detail || 'המסמך אינו זמין כרגע')); return }
+      if (!res.ok) {
+        win?.close()
+        const raw = await res.text().catch(() => '')
+        let detail = ''
+        try { detail = JSON.parse(raw)?.detail || '' } catch { detail = raw.slice(0, 300) }
+        alert(res.status === 404 ? 'אין מסמך PDF זמין לקבלה זו' : (detail || 'המסמך אינו זמין כרגע'))
+        return
+      }
       const url = URL.createObjectURL(await res.blob())
       if (win && win.closed) { URL.revokeObjectURL(url); return }
       if (win) win.location = url; else window.open(url, '_blank')
