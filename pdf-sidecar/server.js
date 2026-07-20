@@ -98,10 +98,10 @@ function withTimeout(promise, ms, label) {
       setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms)),
   ])
 }
-function enqueue(fn) {
+function enqueue(fn, timeoutMs = 80000) {
   const run = chain.then(
-    () => withTimeout(fn(), 50000, 'pdf generation'),
-    () => withTimeout(fn(), 50000, 'pdf generation'),
+    () => withTimeout(fn(), timeoutMs, 'pdf generation'),
+    () => withTimeout(fn(), timeoutMs, 'pdf generation'),
   )
   chain = run.then(() => {}, () => {})
   return run
@@ -143,7 +143,7 @@ app.get('/receipt-pdf', async (req, res) => {
         loggedIn = false
         return await generatePdf(fncnum, PROC_RECEIPT)
       }
-    })
+    }, 20000)
     res.set('Content-Type', 'application/pdf')
        .set('Content-Disposition', `inline; filename="receipt-${fncnum}.pdf"`)
        .send(pdf)
