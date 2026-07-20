@@ -72,6 +72,7 @@ async function generatePdf(ivnum, procName) {
         pd = await pd.proc.reportOptions(1, pd.formats[0].format); break
       case 'message':
         lastMsg = pd.message || ''
+        console.log('[message] proc=%s msg=%s', procName, lastMsg)
         pd = await pd.proc.message(1); break
       case 'displayUrl': {
         const u = (pd.Urls || [])[0] || {}
@@ -89,8 +90,19 @@ async function generatePdf(ivnum, procName) {
 }
 
 // תור — פעולת SDK אחת בכל פעם (ה-session אינו בטוח למקביליות)
+// כל פעולה מוגבלת ל-50 שניות כדי שהתור לא ייתקע אם Priority לא עונה
+function withTimeout(promise, ms, label) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms)),
+  ])
+}
 function enqueue(fn) {
-  const run = chain.then(fn, fn)
+  const run = chain.then(
+    () => withTimeout(fn(), 50000, 'pdf generation'),
+    () => withTimeout(fn(), 50000, 'pdf generation'),
+  )
   chain = run.then(() => {}, () => {})
   return run
 }

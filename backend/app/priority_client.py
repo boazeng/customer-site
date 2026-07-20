@@ -406,7 +406,7 @@ class PriorityClient:
         import os
         base = os.getenv("PDF_SIDECAR_URL", "http://localhost:3001").rstrip("/")
         try:
-            r = httpx.get(f"{base}/receipt-pdf", params={"fncnum": accnum}, timeout=90.0)
+            r = httpx.get(f"{base}/receipt-pdf", params={"fncnum": accnum}, timeout=55.0)
         except httpx.HTTPError as exc:
             raise PriorityError(f"שירות ה-PDF אינו זמין: {exc}", 502) from exc
         if r.status_code != 200 or r.content[:4] != b"%PDF":
