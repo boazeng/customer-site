@@ -30,7 +30,7 @@ export default function Receipts({ ctx }) {
     <>
       <div className="page-head">
         <div>
-          <h1>קבלות</h1>
+          <h1>קבלות <span style={{fontSize:'0.55em',color:'#aaa',fontWeight:400}}>v7</span></h1>
           <div className="sub">{ctx.display_name || data?.display_name} · {rows.length} קבלות</div>
         </div>
       </div>
