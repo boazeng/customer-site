@@ -397,6 +397,27 @@ class PriorityClient:
         return self._cached(f"receipts:{custname}", run)
 
 
+    def get_receipt_pdf(self, custname: str, accnum: str):
+        """מחזיר (pdf_bytes, filename) — בדיוק כמו get_invoice_pdf אבל עם source=RECEIPTS."""
+        custname = (custname or "").strip()
+        accnum = (accnum or "").strip()
+        if not custname or not accnum:
+            raise PriorityError("חסר מספר קבלה או לקוח", 400)
+        import os
+        base = os.getenv("PDF_SIDECAR_URL", "http://localhost:3001").rstrip("/")
+        try:
+            r = httpx.get(f"{base}/invoice-pdf",
+                          params={"ivnum": accnum, "source": "RECEIPTS"}, timeout=90.0)
+        except httpx.HTTPError as exc:
+            raise PriorityError(f"שירות ה-PDF אינו זמין: {exc}", 502) from exc
+        if r.status_code != 200 or r.content[:4] != b"%PDF":
+            try:
+                detail = r.json().get("error", "")
+            except Exception:
+                detail = r.text[:200]
+            raise PriorityError(f"הפקת ה-PDF נכשלה: {detail}", 502)
+        return r.content, f"receipt-{accnum}.pdf"
+
     def search_accounts(self, top: int = 500) -> list[dict]:
         """רשימת חשבונות לבחירת שם-חשבון ללקוח (סינון בצד הלקוח)."""
         def run():

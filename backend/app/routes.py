@@ -5,12 +5,8 @@
     שאיתו נכנס (שדה EMAIL בכרטיס הלקוח). אין מאגר שיוכים — Priority הוא מקור האמת.
   - מנהל (role=admin): בוחר כל לקוח (custname ב-query) דרך מסך "בחירת לקוח".
 """
-import asyncio
-import os
-import httpx as _httpx
-
 from fastapi import APIRouter, Request, Depends, HTTPException, Query
-from fastapi.responses import Response, StreamingResponse
+from fastapi.responses import Response
 
 from .priority_client import PriorityClient, PriorityError
 from .ledger_xlsx import build_ledger_xlsx
@@ -126,9 +122,14 @@ def build_router(priority: PriorityClient, current_user, require_role,
                 "count": len(rows), "total": round(sum(r["total"] for r in rows), 2)}
 
     @router.get("/receipt-pdf")
-    async def receipt_pdf(request: Request, accnum: str = Query(...),
-                          custname: str | None = Query(None)):
-        raise HTTPException(503, "ASYNC-DIAG: async route working")
+    def receipt_pdf(request: Request, accnum: str = Query(...),
+                    custname: str | None = Query(None)):
+        cust, _display, _is_admin = _resolve(request, custname)
+        if not cust:
+            raise HTTPException(400, "לא נבחר לקוח")
+        pdf, fname = _wrap(lambda: priority.get_receipt_pdf(cust, accnum))
+        return Response(content=pdf, media_type="application/pdf",
+                        headers={"Content-Disposition": f'inline; filename="{fname}"'})
 
     # ---------------- ניהול (admin) ----------------
     @router.get("/admin/priority/customers", dependencies=[admin_only])

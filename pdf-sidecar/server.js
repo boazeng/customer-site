@@ -15,14 +15,13 @@ const CFG = {
 }
 const COMPANY = CFG.profile.company
 const PORT = parseInt(process.env.PORT || '3001', 10)
-// מיפוי סוג חשבונית (entity) → פרוצדורת הדפסה ב-Priority (WWWSHOW<אות>IV)
-//   A=חשבונית מס · E=חשבונית מס קבלה · C=חשבונית לקוח מרכזת/זיכוי
+// מיפוי entity → פרוצדורת הדפסה ב-Priority
 const PROC_BY_SOURCE = {
   AINVOICES: process.env.PROC_AINVOICES || 'WWWSHOWAIV',
   EINVOICES: process.env.PROC_EINVOICES || 'WWWSHOWEIV',
   CINVOICES: process.env.PROC_CINVOICES || 'WWWSHOWCIV',
+  RECEIPTS:  process.env.PROC_RECEIPTS  || 'WWWSHOWTIV',
 }
-const PROC_RECEIPT = process.env.PROC_RECEIPTS || 'WWWSHOWTIV'
 
 let loggedIn = false
 let chain = Promise.resolve()   // serialize SDK access (session יחיד)
