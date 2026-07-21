@@ -18,8 +18,9 @@ export default function Receipts({ ctx }) {
   }, [ctx.custname])
 
   function viewPdf(r) {
-    openReceiptPdf({ accnum: r.accnum, custname: ctx.custname },
-      (b) => setBusy(b ? r.accnum : ''))
+    openReceiptPdf({ ...r, custname: ctx.custname,
+      display_name: ctx.display_name || data?.display_name })
+    setBusy('')
   }
 
   if (loading) return <Loading text="טוען קבלות מ-Priority…" />

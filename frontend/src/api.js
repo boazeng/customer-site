@@ -149,32 +149,66 @@ export function openLedgerDoc(data) {
   win.document.close()
 }
 
-// פתיחת PDF קבלה — SSE (GET) → בייט ראשון מיידי, עוקף TTFB limit של Cloudflare
-export function openReceiptPdf({ accnum, custname }, onBusy) {
-  onBusy?.(true)
+// פתיחת קבלה בלשונית חדשה — HTML מקומי מהנתונים (Priority לא מייצרת מסמך קבלה)
+export function openReceiptPdf(receipt, onBusy) {
   const win = window.open('', '_blank')
-  if (win) win.document.write(INVOICE_LOADING_HTML)
-  const p = new URLSearchParams({ accnum })
-  if (custname) p.set('custname', custname)
-  const es = new EventSource('/api/receipt-pdf-stream?' + p, { withCredentials: true })
-  let done = false
-  const finish = () => { if (!done) { done = true; es.close(); onBusy?.(false) } }
-  es.addEventListener('ready', (e) => {
-    finish()
-    try {
-      const bytes = Uint8Array.from(atob(e.data), c => c.charCodeAt(0))
-      const url = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }))
-      if (win && win.closed) { URL.revokeObjectURL(url); return }
-      if (win) win.location = url; else window.open(url, '_blank')
-      setTimeout(() => URL.revokeObjectURL(url), 60000)
-    } catch { win?.close(); alert('שגיאה בפתיחת ה-PDF') }
-  })
-  es.addEventListener('err', (e) => {
-    finish(); win?.close()
-    let msg = e.data || ''
-    try { msg = JSON.parse(msg) } catch {}
-    alert(msg ? `שגיאה: ${msg}` : 'שגיאה בהפקת ה-PDF')
-  })
-  es.onerror = () => { finish(); win?.close(); alert('שגיאה בחיבור לשרת') }
-  setTimeout(() => { if (!done) { finish(); win?.close(); alert('הפקת ה-PDF ארכה זמן רב מדי') } }, 120000)
+  if (!win) { alert('חוסם החלונות הקופצים מנע פתיחה — אפשר פתיחת חלונות לאתר'); return }
+  win.document.write(buildReceiptHtml(receipt))
+  win.document.close()
+  onBusy?.(false)
+}
+
+function buildReceiptHtml({ accnum, fncnum, date, pay_method, details, total, custname, display_name }) {
+  const _e = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  const num = fmtMoney(total)
+  const dt = fmtDate(date)
+  const ref = accnum || fncnum || ''
+  return `<!doctype html><html dir="rtl" lang="he"><head><meta charset="utf-8">
+<title>קבלה ${_e(ref)}</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700;800&family=Space+Grotesk:wght@500;600&display=swap');
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Heebo,Arial,sans-serif;background:#f0f2f5;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:32px 16px}
+  .toolbar{margin-bottom:24px;display:flex;gap:12px}
+  .toolbar button{font-family:inherit;font-size:1rem;font-weight:700;padding:10px 32px;border-radius:999px;cursor:pointer;border:none}
+  .btn-print{background:#1F3A5F;color:#fff}
+  .btn-close{background:#fff;color:#1F3A5F;border:1px solid #d0d7e3!important}
+  .card{background:#fff;border-radius:16px;box-shadow:0 4px 24px rgba(0,0,0,.10);width:100%;max-width:480px;overflow:hidden}
+  .card-header{background:#1F3A5F;color:#fff;padding:28px 32px 22px;text-align:center}
+  .card-header h1{font-size:2rem;font-weight:800;letter-spacing:.03em}
+  .card-header .ref{font-size:.95rem;opacity:.75;margin-top:4px;font-weight:400}
+  .card-body{padding:28px 32px}
+  .row{display:flex;justify-content:space-between;align-items:baseline;padding:11px 0;border-bottom:1px solid #f0f0f0}
+  .row:last-child{border-bottom:none}
+  .label{color:#8a8a7a;font-size:.88rem;font-weight:500}
+  .value{font-size:.97rem;font-weight:600;color:#1a1a18;text-align:left}
+  .amount-row{background:#f6f8fb;border-radius:10px;padding:16px 20px;margin:18px 0 0;display:flex;justify-content:space-between;align-items:center}
+  .amount-row .label{font-size:1rem;font-weight:700;color:#1F3A5F}
+  .amount-row .value{font-family:'Space Grotesk',monospace;font-size:1.7rem;font-weight:700;color:#1F3A5F}
+  .stamp{margin-top:28px;border:2px dashed #c8d4e3;border-radius:10px;text-align:center;padding:14px;color:#8a8a7a;font-size:.82rem}
+  @media print{body{background:#fff;padding:0} .toolbar{display:none} .card{box-shadow:none;border-radius:0;max-width:100%}}
+</style></head><body>
+<div class="toolbar">
+  <button class="btn-print" onclick="window.print()">הדפסה</button>
+  <button class="btn-close" onclick="window.close()">סגירה</button>
+</div>
+<div class="card">
+  <div class="card-header">
+    <h1>קבלה</h1>
+    <div class="ref">מס׳ ${_e(ref)}</div>
+  </div>
+  <div class="card-body">
+    <div class="row"><span class="label">לקוח</span><span class="value">${_e(display_name || custname)}</span></div>
+    <div class="row"><span class="label">מספר לקוח</span><span class="value">${_e(custname)}</span></div>
+    <div class="row"><span class="label">תאריך</span><span class="value">${_e(dt)}</span></div>
+    <div class="row"><span class="label">אמצעי תשלום</span><span class="value">${_e(pay_method)}</span></div>
+    ${details ? `<div class="row"><span class="label">פרטים</span><span class="value">${_e(details)}</span></div>` : ''}
+    <div class="amount-row">
+      <span class="label">סכום שהתקבל</span>
+      <span class="value">₪${_e(num)}</span>
+    </div>
+    <div class="stamp">מסמך זה הופק ממערכת הלקוחות · ${_e(dt)}</div>
+  </div>
+</div>
+</body></html>`
 }
