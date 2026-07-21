@@ -162,6 +162,28 @@ def build_router(priority: PriorityClient, current_user, require_role,
         except Exception as exc:
             raise HTTPException(502, str(exc)) from exc
 
+    @router.get("/admin/receipts-raw", dependencies=[admin_only])
+    def receipts_raw(custname: str = Query(...)):
+        """מחזיר את כל שורות הכרטסת הגולמיות של לקוח לבדיקת IVNUM/FNCNUM."""
+        import os as _os
+        accounts = _wrap(lambda: priority.list_receivable_accounts(custname))
+        from concurrent.futures import ThreadPoolExecutor
+        with ThreadPoolExecutor(max_workers=8) as pool:
+            ledgers = list(pool.map(
+                lambda a: priority._account_ledger(a["accname"]), accounts))
+        rows = []
+        for led in ledgers:
+            for line in led["lines"]:
+                if line["credit"] > 0 and "ארנק" in (line["details"] or ""):
+                    rows.append({
+                        "date": line["date"],
+                        "ivnum": line["ivnum"],
+                        "fncnum": line["fncnum"],
+                        "details": line["details"],
+                        "credit": line["credit"],
+                    })
+        return {"custname": custname, "count": len(rows), "rows": rows}
+
     # ---------------- ניהול (admin) ----------------
     @router.get("/admin/priority/customers", dependencies=[admin_only])
     def priority_customers():

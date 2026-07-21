@@ -384,7 +384,7 @@ class PriorityClient:
                     if "ארנק" not in (line["details"] or ""):
                         continue
                     out.append({
-                        "accnum": line["fncnum"] or line["ivnum"] or "",
+                        "accnum": line["ivnum"] or line["fncnum"] or "",
                         "fncnum": line["fncnum"] or "",
                         "date": line["date"],
                         "status": "",
