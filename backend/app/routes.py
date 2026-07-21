@@ -5,8 +5,12 @@
     שאיתו נכנס (שדה EMAIL בכרטיס הלקוח). אין מאגר שיוכים — Priority הוא מקור האמת.
   - מנהל (role=admin): בוחר כל לקוח (custname ב-query) דרך מסך "בחירת לקוח".
 """
+import asyncio
+import os
+import httpx as _httpx
+
 from fastapi import APIRouter, Request, Depends, HTTPException, Query
-from fastapi.responses import Response
+from fastapi.responses import Response, StreamingResponse
 
 from .priority_client import PriorityClient, PriorityError
 from .ledger_xlsx import build_ledger_xlsx
@@ -122,19 +126,59 @@ def build_router(priority: PriorityClient, current_user, require_role,
                 "count": len(rows), "total": round(sum(r["total"] for r in rows), 2)}
 
     @router.get("/receipt-pdf")
-    def receipt_pdf(request: Request, accnum: str = Query(...),
-                    custname: str | None = Query(None)):
+    async def receipt_pdf(request: Request, accnum: str = Query(...),
+                          custname: str | None = Query(None)):
+        """PDF קבלה — משתמש ב-StreamingResponse כדי לשלוח headers מיד (לפני שה-sidecar מסיים),
+        אחרת cloudflared מחזיר 502 לפני שמגיעה תשובה מה-backend."""
+        cust, _display, _is_admin = _resolve(request, custname)
+        if not cust:
+            raise HTTPException(400, "לא נבחר לקוח")
+        accnum_clean = (accnum or "").strip()
+        if not accnum_clean:
+            raise HTTPException(400, "חסר מספר קבלה")
+
+        base = os.getenv("PDF_SIDECAR_URL", "http://localhost:3001").rstrip("/")
+        url = f"{base}/receipt-pdf"
+
+        async def _fetch() -> bytes:
+            async with _httpx.AsyncClient() as cli:
+                r = await cli.get(url, params={"fncnum": accnum_clean},
+                                  timeout=_httpx.Timeout(connect=5.0, read=80.0))
+                if r.status_code != 200:
+                    try:
+                        detail = r.json().get("error", "")
+                    except Exception:
+                        detail = r.text[:200]
+                    raise RuntimeError(f"הפקת ה-PDF נכשלה: {detail or r.status_code}")
+                if r.content[:4] != b"%PDF":
+                    raise RuntimeError("התגובה אינה PDF תקין")
+                return r.content
+
+        # ניסיון מהיר — אם ה-sidecar עונה תוך 5 שניות מחזירים Response רגיל (עם שגיאות מלאות)
+        task = asyncio.ensure_future(_fetch())
         try:
-            cust, _display, _is_admin = _resolve(request, custname)
-            if not cust:
-                raise HTTPException(400, "לא נבחר לקוח")
-            pdf, fname = _wrap(lambda: priority.get_receipt_pdf(cust, accnum))
+            pdf = await asyncio.wait_for(asyncio.shield(task), timeout=5.0)
             return Response(content=pdf, media_type="application/pdf",
-                            headers={"Content-Disposition": f'inline; filename="{fname}"'})
-        except HTTPException:
-            raise
+                            headers={"Content-Disposition": f'inline; filename="receipt-{accnum_clean}.pdf"'})
+        except asyncio.TimeoutError:
+            pass   # ממשיכים ל-StreamingResponse
         except Exception as exc:
-            raise HTTPException(502, f"שגיאה בלתי צפויה: {type(exc).__name__}: {exc}") from exc
+            task.cancel()
+            raise HTTPException(502, str(exc))
+
+        # אם ה-sidecar עדיין עובד אחרי 5 שניות — שולחים headers מיד ומזרימים את הגוף אחר-כך.
+        # cloudflared מקבל את TTFB ולא מגיע ל-timeout שלו.
+        async def generate():
+            try:
+                yield await asyncio.wait_for(task, timeout=80.0)
+            except Exception:
+                yield b""   # הדפדפן יראה שגיאת PDF — אבל לא HTML של Cloudflare
+
+        return StreamingResponse(
+            generate(),
+            media_type="application/pdf",
+            headers={"Content-Disposition": f'inline; filename="receipt-{accnum_clean}.pdf"'},
+        )
 
     # ---------------- ניהול (admin) ----------------
     @router.get("/admin/priority/customers", dependencies=[admin_only])

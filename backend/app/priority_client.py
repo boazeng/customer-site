@@ -396,14 +396,6 @@ class PriorityClient:
             return out
         return self._cached(f"receipts:{custname}", run)
 
-    def get_receipt_pdf(self, custname: str, accnum: str):
-        """מחזיר (pdf_bytes, filename). Priority מאמת בעצמו שהמסמך שייך למשתמש המחובר."""
-        custname = (custname or "").strip()
-        accnum = (accnum or "").strip()
-        if not custname or not accnum:
-            raise PriorityError("חסר מספר קבלה או לקוח", 400)
-        # DIAG: immediate error to verify backend is reachable without sidecar delay
-        raise PriorityError(f"DIAG-OK: backend reached, accnum={accnum}", 503)
 
     def search_accounts(self, top: int = 500) -> list[dict]:
         """רשימת חשבונות לבחירת שם-חשבון ללקוח (סינון בצד הלקוח)."""
