@@ -39,4 +39,4 @@ ENV PYTHONUNBUFFERED=1 \
 EXPOSE 8000
 # --app-dir מוסיף את backend/ ל-sys.path כך ש-"app.main" נפתר
 CMD ["uvicorn", "app.main:app", "--app-dir", "/app/backend", \
-     "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]
+     "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
