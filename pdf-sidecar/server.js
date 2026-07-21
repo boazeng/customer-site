@@ -83,7 +83,7 @@ async function generatePdf(ivnum, procName) {
         return Buffer.from(b64, 'base64')
       }
       case 'end':
-        throw new Error('procedure ended without a document')
+        throw new Error(`procedure ended without a document (proc=${procName} value=${ivnum})`)
       default:
         throw new Error('unhandled step: ' + pd.type)
     }
@@ -152,6 +152,24 @@ app.get('/receipt-pdf', async (req, res) => {
   } catch (e) {
     console.error('receipt pdf error:', fncnum, String(e && e.message || e))
     res.status(502).json({ error: String(e && e.message || e) })
+  }
+})
+
+// endpoint אבחוני — מחזיר את שדות הקלט של פרוצדורה (ללא הפקת מסמך)
+app.get('/debug-proc-fields', async (req, res) => {
+  const proc = String(req.query.proc || 'WWWSHOWTIV').trim()
+  try {
+    await ensureLogin()
+    const pd = await priority.procStart(proc, 'P', () => {}, COMPANY)
+    if (pd.type === 'inputFields') {
+      // בטל את הפרוצדורה מיד — רק מעיינים בשדות
+      try { await pd.proc.cancel() } catch {}
+      return res.json({ proc, type: 'inputFields', fields: pd.input?.EditFields || [] })
+    }
+    try { await pd.proc.cancel() } catch {}
+    return res.json({ proc, type: pd.type, message: pd.message || '' })
+  } catch (e) {
+    return res.status(500).json({ proc, error: String(e && e.message || e) })
   }
 })
 

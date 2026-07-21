@@ -151,6 +151,17 @@ def build_router(priority: PriorityClient, current_user, require_role,
                                  headers={"Cache-Control": "no-cache",
                                           "X-Accel-Buffering": "no"})
 
+    # ---------------- אבחון (admin) ----------------
+    @router.get("/admin/sidecar-debug", dependencies=[admin_only])
+    def sidecar_debug(proc: str = Query("WWWSHOWTIV")):
+        import os, httpx as _httpx
+        base = os.getenv("PDF_SIDECAR_URL", "http://localhost:3001").rstrip("/")
+        try:
+            r = _httpx.get(f"{base}/debug-proc-fields", params={"proc": proc}, timeout=30.0)
+            return r.json()
+        except Exception as exc:
+            raise HTTPException(502, str(exc)) from exc
+
     # ---------------- ניהול (admin) ----------------
     @router.get("/admin/priority/customers", dependencies=[admin_only])
     def priority_customers():
