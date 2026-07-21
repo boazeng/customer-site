@@ -132,45 +132,34 @@ export function openLedgerDoc(data) {
   win.document.close()
 }
 
-// פתיחת PDF קבלה — מפעיל job ב-background ומ-poll עד שמוכן (עוקף את TTFB limit של Cloudflare)
-export async function openReceiptPdf({ accnum, custname }, onBusy) {
+// פתיחת PDF קבלה — SSE (GET) → בייט ראשון מיידי, עוקף TTFB limit של Cloudflare
+export function openReceiptPdf({ accnum, custname }, onBusy) {
   onBusy?.(true)
   const win = window.open('', '_blank')
   if (win) win.document.write(INVOICE_LOADING_HTML)
-  try {
-    const p = new URLSearchParams({ accnum })
-    if (custname) p.set('custname', custname)
-    const startRes = await fetch('/api/receipt-pdf-start?' + p, { method: 'POST', credentials: 'include' })
-    if (!startRes.ok) {
-      win?.close()
-      const raw = await startRes.text().catch(() => '')
-      let detail = ''; try { detail = JSON.parse(raw)?.detail || '' } catch { detail = raw.slice(0, 300) }
-      alert(`שגיאה ${startRes.status}: ${detail || '(אין פרטים)'}`)
-      return
-    }
-    const { job_id } = await startRes.json()
-    for (let i = 0; i < 40; i++) {
-      await new Promise(r => setTimeout(r, 3000))
-      if (win && win.closed) return
-      const pollRes = await fetch(`/api/receipt-pdf-result?job_id=${encodeURIComponent(job_id)}`, { credentials: 'include' })
-      if (pollRes.ok && pollRes.headers.get('content-type')?.includes('application/pdf')) {
-        const url = URL.createObjectURL(await pollRes.blob())
-        if (win && win.closed) { URL.revokeObjectURL(url); return }
-        if (win) win.location = url; else window.open(url, '_blank')
-        setTimeout(() => URL.revokeObjectURL(url), 60000)
-        return
-      }
-      if (!pollRes.ok) {
-        win?.close()
-        const raw = await pollRes.text().catch(() => '')
-        let detail = ''; try { detail = JSON.parse(raw)?.detail || '' } catch { detail = raw.slice(0, 300) }
-        alert(`שגיאה ${pollRes.status}: ${detail || '(אין פרטים)'}`)
-        return
-      }
-    }
-    win?.close(); alert('הפקת ה-PDF ארכה זמן רב מדי, נסה שוב')
-  } catch { win?.close(); alert('שגיאה בטעינת המסמך') }
-  finally { onBusy?.(false) }
+  const p = new URLSearchParams({ accnum })
+  if (custname) p.set('custname', custname)
+  const es = new EventSource('/api/receipt-pdf-stream?' + p, { withCredentials: true })
+  let done = false
+  const finish = () => { if (!done) { done = true; es.close(); onBusy?.(false) } }
+  es.addEventListener('ready', (e) => {
+    finish()
+    try {
+      const bytes = Uint8Array.from(atob(e.data), c => c.charCodeAt(0))
+      const url = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }))
+      if (win && win.closed) { URL.revokeObjectURL(url); return }
+      if (win) win.location = url; else window.open(url, '_blank')
+      setTimeout(() => URL.revokeObjectURL(url), 60000)
+    } catch { win?.close(); alert('שגיאה בפתיחת ה-PDF') }
+  })
+  es.addEventListener('err', (e) => {
+    finish(); win?.close()
+    let msg = e.data || ''
+    try { msg = JSON.parse(msg) } catch {}
+    alert(msg ? `שגיאה: ${msg}` : 'שגיאה בהפקת ה-PDF')
+  })
+  es.onerror = () => { finish(); win?.close(); alert('שגיאה בחיבור לשרת') }
+  setTimeout(() => { if (!done) { finish(); win?.close(); alert('הפקת ה-PDF ארכה זמן רב מדי') } }, 120000)
 }
 
 // פתיחת PDF של חשבונית בלשונית חדשה לצפייה/הדפסה. בקשה אחת ללחיצה, חשבונית אחת.

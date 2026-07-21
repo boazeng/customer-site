@@ -5,16 +5,16 @@
     שאיתו נכנס (שדה EMAIL בכרטיס הלקוח). אין מאגר שיוכים — Priority הוא מקור האמת.
   - מנהל (role=admin): בוחר כל לקוח (custname ב-query) דרך מסך "בחירת לקוח".
 """
-import threading
-import uuid
+import asyncio
+import base64
+import json as _json
 
 from fastapi import APIRouter, Request, Depends, HTTPException, Query
-from fastapi.responses import Response
+from fastapi.responses import Response, StreamingResponse
 
 from .priority_client import PriorityClient, PriorityError
 from .ledger_xlsx import build_ledger_xlsx
 
-_receipt_jobs: dict = {}
 
 
 def build_router(priority: PriorityClient, current_user, require_role,
@@ -126,39 +126,30 @@ def build_router(priority: PriorityClient, current_user, require_role,
         return {"custname": cust, "display_name": display, "receipts": rows,
                 "count": len(rows), "total": round(sum(r["total"] for r in rows), 2)}
 
-    @router.post("/receipt-pdf-start")
-    def receipt_pdf_start(request: Request, accnum: str = Query(...),
-                          custname: str | None = Query(None)):
-        cust, _display, _is_admin = _resolve(request, custname)
+    @router.get("/receipt-pdf-stream")
+    async def receipt_pdf_stream(request: Request, accnum: str = Query(...),
+                                 custname: str | None = Query(None)):
+        loop = asyncio.get_event_loop()
+        cust, _display, _is_admin = await loop.run_in_executor(
+            None, lambda: _resolve(request, custname))
         if not cust:
             raise HTTPException(400, "לא נבחר לקוח")
-        jid = str(uuid.uuid4())
-        _receipt_jobs[jid] = {"status": "pending"}
-        def _run():
-            try:
-                pdf, fname = priority.get_receipt_pdf(cust, accnum)
-                _receipt_jobs[jid] = {"status": "done", "pdf": pdf, "fname": fname}
-            except PriorityError as exc:
-                _receipt_jobs[jid] = {"status": "error", "detail": exc.message, "code": exc.status}
-            except Exception as exc:
-                _receipt_jobs[jid] = {"status": "error", "detail": str(exc), "code": 502}
-        threading.Thread(target=_run, daemon=True).start()
-        return {"job_id": jid}
 
-    @router.get("/receipt-pdf-result")
-    def receipt_pdf_result(job_id: str = Query(...)):
-        job = _receipt_jobs.get(job_id)
-        if not job:
-            raise HTTPException(404, "job not found")
-        if job["status"] == "pending":
-            return {"status": "pending"}
-        if job["status"] == "error":
-            _receipt_jobs.pop(job_id, None)
-            raise HTTPException(job.get("code", 502), job.get("detail", "שגיאה"))
-        pdf, fname = job["pdf"], job["fname"]
-        _receipt_jobs.pop(job_id, None)
-        return Response(content=pdf, media_type="application/pdf",
-                        headers={"Content-Disposition": f'inline; filename="{fname}"'})
+        async def generate():
+            yield "data: waiting\n\n"
+            try:
+                pdf, _fname = await loop.run_in_executor(
+                    None, lambda: priority.get_receipt_pdf(cust, accnum))
+                b64 = base64.b64encode(pdf).decode()
+                yield f"event: ready\ndata: {b64}\n\n"
+            except PriorityError as exc:
+                yield f"event: err\ndata: {_json.dumps(exc.message)}\n\n"
+            except Exception as exc:
+                yield f"event: err\ndata: {_json.dumps(str(exc))}\n\n"
+
+        return StreamingResponse(generate(), media_type="text/event-stream",
+                                 headers={"Cache-Control": "no-cache",
+                                          "X-Accel-Buffering": "no"})
 
     # ---------------- ניהול (admin) ----------------
     @router.get("/admin/priority/customers", dependencies=[admin_only])
