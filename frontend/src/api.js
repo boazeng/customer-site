@@ -162,7 +162,7 @@ export async function openReceiptPdf({ accnum, custname }, onBusy) {
       win?.close()
       const raw = await startRes.text().catch(() => '')
       let detail = ''; try { detail = JSON.parse(raw)?.detail || '' } catch { detail = raw.slice(0, 300) }
-      alert(`שגיאה ${startRes.status}: ${detail || '(אין פרטים)'}`)
+      alert(`[START] שגיאה ${startRes.status}: ${detail || '(אין פרטים)'}`)
       return
     }
     const { job_id } = await startRes.json()
@@ -181,11 +181,11 @@ export async function openReceiptPdf({ accnum, custname }, onBusy) {
         win?.close()
         const raw = await pollRes.text().catch(() => '')
         let detail = ''; try { detail = JSON.parse(raw)?.detail || '' } catch { detail = raw.slice(0, 300) }
-        alert(`שגיאה ${pollRes.status}: ${detail || '(אין פרטים)'}`)
+        alert(`[POLL-${i}] שגיאה ${pollRes.status}: ${detail || '(אין פרטים)'}`)
         return
       }
     }
-    win?.close(); alert('הפקת ה-PDF ארכה זמן רב מדי, נסה שוב')
+    win?.close(); alert('[TIMEOUT] הפקת ה-PDF ארכה זמן רב מדי, נסה שוב')
   } catch { win?.close(); alert('שגיאה בטעינת המסמך') }
   finally { onBusy?.(false) }
 }
