@@ -132,6 +132,47 @@ export function openLedgerDoc(data) {
   win.document.close()
 }
 
+// פתיחת PDF קבלה — מפעיל job ב-background ומ-poll עד שמוכן (עוקף את TTFB limit של Cloudflare)
+export async function openReceiptPdf({ accnum, custname }, onBusy) {
+  onBusy?.(true)
+  const win = window.open('', '_blank')
+  if (win) win.document.write(INVOICE_LOADING_HTML)
+  try {
+    const p = new URLSearchParams({ accnum })
+    if (custname) p.set('custname', custname)
+    const startRes = await fetch('/api/receipt-pdf-start?' + p, { method: 'POST', credentials: 'include' })
+    if (!startRes.ok) {
+      win?.close()
+      const raw = await startRes.text().catch(() => '')
+      let detail = ''; try { detail = JSON.parse(raw)?.detail || '' } catch { detail = raw.slice(0, 300) }
+      alert(`שגיאה ${startRes.status}: ${detail || '(אין פרטים)'}`)
+      return
+    }
+    const { job_id } = await startRes.json()
+    for (let i = 0; i < 40; i++) {
+      await new Promise(r => setTimeout(r, 3000))
+      if (win && win.closed) return
+      const pollRes = await fetch(`/api/receipt-pdf-result?job_id=${encodeURIComponent(job_id)}`, { credentials: 'include' })
+      if (pollRes.ok && pollRes.headers.get('content-type')?.includes('application/pdf')) {
+        const url = URL.createObjectURL(await pollRes.blob())
+        if (win && win.closed) { URL.revokeObjectURL(url); return }
+        if (win) win.location = url; else window.open(url, '_blank')
+        setTimeout(() => URL.revokeObjectURL(url), 60000)
+        return
+      }
+      if (!pollRes.ok) {
+        win?.close()
+        const raw = await pollRes.text().catch(() => '')
+        let detail = ''; try { detail = JSON.parse(raw)?.detail || '' } catch { detail = raw.slice(0, 300) }
+        alert(`שגיאה ${pollRes.status}: ${detail || '(אין פרטים)'}`)
+        return
+      }
+    }
+    win?.close(); alert('הפקת ה-PDF ארכה זמן רב מדי, נסה שוב')
+  } catch { win?.close(); alert('שגיאה בטעינת המסמך') }
+  finally { onBusy?.(false) }
+}
+
 // פתיחת PDF של חשבונית בלשונית חדשה לצפייה/הדפסה. בקשה אחת ללחיצה, חשבונית אחת.
 export async function openInvoicePdf({ ivnum, source, custname }, onBusy) {
   onBusy?.(true)

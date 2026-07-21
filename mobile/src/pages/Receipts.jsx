@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { api, fmtMoney, fmtDate, INVOICE_LOADING_HTML } from '../api.js'
+import { api, fmtMoney, fmtDate, openReceiptPdf } from '../api.js'
 import { Loading } from './Invoices.jsx'
 
 export default function Receipts({ ctx }) {
@@ -13,26 +13,9 @@ export default function Receipts({ ctx }) {
     api.receipts(ctx.custname).then(setData).catch((e) => setErr(e.message)).finally(() => setLoading(false))
   }, [ctx.custname])
 
-  async function viewPdf(r) {
-    setBusy(r.accnum)
-    const win = window.open('', '_blank')
-    if (win) win.document.write(INVOICE_LOADING_HTML)
-    try {
-      const res = await fetch(api.receiptPdfUrl({ accnum: r.accnum, custname: ctx.custname }), { credentials: 'include' })
-      if (win && win.closed) return
-      if (!res.ok) {
-        win?.close()
-        const raw = await res.text().catch(() => '')
-        let detail = ''
-        try { detail = JSON.parse(raw)?.detail || '' } catch { detail = raw.slice(0, 300) }
-        alert(res.status === 404 ? 'אין מסמך PDF זמין לקבלה זו' : (detail || 'המסמך אינו זמין כרגע'))
-        return
-      }
-      const url = URL.createObjectURL(await res.blob())
-      if (win && win.closed) { URL.revokeObjectURL(url); return }
-      if (win) win.location = url; else window.open(url, '_blank')
-      setTimeout(() => URL.revokeObjectURL(url), 60000)
-    } catch { win?.close(); alert('שגיאה בטעינת המסמך') } finally { setBusy('') }
+  function viewPdf(r) {
+    openReceiptPdf({ accnum: r.accnum, custname: ctx.custname },
+      (b) => setBusy(b ? r.accnum : ''))
   }
 
   if (loading) return <Loading text="טוען קבלות…" />
