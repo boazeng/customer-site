@@ -124,12 +124,17 @@ def build_router(priority: PriorityClient, current_user, require_role,
     @router.get("/receipt-pdf")
     def receipt_pdf(request: Request, accnum: str = Query(...),
                     custname: str | None = Query(None)):
-        cust, _display, _is_admin = _resolve(request, custname)
-        if not cust:
-            raise HTTPException(400, "לא נבחר לקוח")
-        pdf, fname = _wrap(lambda: priority.get_receipt_pdf(cust, accnum))
-        return Response(content=pdf, media_type="application/pdf",
-                        headers={"Content-Disposition": f'inline; filename="{fname}"'})
+        try:
+            cust, _display, _is_admin = _resolve(request, custname)
+            if not cust:
+                raise HTTPException(400, "לא נבחר לקוח")
+            pdf, fname = _wrap(lambda: priority.get_receipt_pdf(cust, accnum))
+            return Response(content=pdf, media_type="application/pdf",
+                            headers={"Content-Disposition": f'inline; filename="{fname}"'})
+        except HTTPException:
+            raise
+        except Exception as exc:
+            raise HTTPException(502, f"שגיאה בלתי צפויה: {type(exc).__name__}: {exc}") from exc
 
     # ---------------- ניהול (admin) ----------------
     @router.get("/admin/priority/customers", dependencies=[admin_only])

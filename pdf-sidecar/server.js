@@ -143,7 +143,7 @@ app.get('/receipt-pdf', async (req, res) => {
         loggedIn = false
         return await generatePdf(fncnum, PROC_RECEIPT)
       }
-    }, 20000)
+    }, 10000)
     res.set('Content-Type', 'application/pdf')
        .set('Content-Disposition', `inline; filename="receipt-${fncnum}.pdf"`)
        .send(pdf)
