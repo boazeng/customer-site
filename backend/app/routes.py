@@ -164,19 +164,27 @@ def build_router(priority: PriorityClient, current_user, require_role,
 
     @router.get("/admin/receipts-raw", dependencies=[admin_only])
     def receipts_raw(custname: str = Query(...)):
-        """מחזיר שורות כרטסת גולמיות (ללא פילטר) לבדיקת IVNUM/FNCNUM."""
-        accounts = _wrap(lambda: priority.list_receivable_accounts(custname))
+        """Debug: raw ACCOUNTS_RECEIVABLE query + first 3 credit lines."""
+        try:
+            hi = str(int(custname) + 1)
+        except ValueError:
+            hi = custname + "￿"
+        raw = _wrap(lambda: priority._get("ACCOUNTS_RECEIVABLE", {
+            "$filter": f"ACCNAME ge '{custname}' and ACCNAME lt '{hi}'",
+            "$select": "ACCNAME,ACCDES,BALANCE1",
+            "$top": "20",
+        }))
+        accounts = [r.get("ACCNAME") for r in raw.get("value", [])]
         if not accounts:
-            return {"custname": custname, "accounts": [], "error": "no accounts"}
-        acc = accounts[0]["accname"]
-        led = _wrap(lambda: priority._account_ledger(acc))
+            return {"custname": custname, "hi": hi, "accounts": [], "raw_count": len(raw.get("value", []))}
+        led = _wrap(lambda: priority._account_ledger(accounts[0]))
         credit_lines = [l for l in led.get("lines", []) if l["credit"] > 0]
         return {
             "custname": custname,
-            "account": acc,
+            "accounts": accounts,
             "total_lines": len(led.get("lines", [])),
-            "credit_lines": len(credit_lines),
-            "sample_credit": credit_lines[:5],
+            "credit_count": len(credit_lines),
+            "sample": credit_lines[:3],
         }
 
     # ---------------- ניהול (admin) ----------------

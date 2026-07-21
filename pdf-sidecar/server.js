@@ -73,8 +73,8 @@ async function generatePdf(ivnum, procName) {
       case 'reportOptions':
         pd = await pd.proc.reportOptions(1, pd.formats[0].format); break
       case 'message':
-        lastMsg = pd.message || ''
-        console.log('[message] proc=%s msg=%s', procName, lastMsg)
+        lastMsg = pd.message || JSON.stringify(pd)
+        console.log('[message] proc=%s msg=%s full=%s', procName, pd.message, JSON.stringify(pd))
         pd = await pd.proc.message(1); break
       case 'displayUrl': {
         const u = (pd.Urls || [])[0] || {}
@@ -83,7 +83,7 @@ async function generatePdf(ivnum, procName) {
         return Buffer.from(b64, 'base64')
       }
       case 'end':
-        throw new Error(`procedure ended without a document (proc=${procName} value=${ivnum})`)
+        throw new Error(`procedure ended without a document (proc=${procName} value=${ivnum} lastMsg=${lastMsg || 'none'})`)
       default:
         throw new Error('unhandled step: ' + pd.type)
     }
