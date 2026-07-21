@@ -402,20 +402,8 @@ class PriorityClient:
         accnum = (accnum or "").strip()
         if not custname or not accnum:
             raise PriorityError("חסר מספר קבלה או לקוח", 400)
-
-        import os
-        base = os.getenv("PDF_SIDECAR_URL", "http://localhost:3001").rstrip("/")
-        try:
-            r = httpx.get(f"{base}/receipt-pdf", params={"fncnum": accnum}, timeout=12.0)
-        except httpx.HTTPError as exc:
-            raise PriorityError(f"שירות ה-PDF אינו זמין: {exc}", 502) from exc
-        if r.status_code != 200 or r.content[:4] != b"%PDF":
-            try:
-                detail = r.json().get("error", "")
-            except Exception:
-                detail = r.text[:200]
-            raise PriorityError(f"הפקת ה-PDF נכשלה: {detail}", 502)
-        return r.content, f"receipt-{accnum}.pdf"
+        # DIAG: immediate error to verify backend is reachable without sidecar delay
+        raise PriorityError(f"DIAG-OK: backend reached, accnum={accnum}", 503)
 
     def search_accounts(self, top: int = 500) -> list[dict]:
         """רשימת חשבונות לבחירת שם-חשבון ללקוח (סינון בצד הלקוח)."""
