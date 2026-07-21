@@ -164,9 +164,20 @@ def build_router(priority: PriorityClient, current_user, require_role,
 
     @router.get("/admin/receipts-raw", dependencies=[admin_only])
     def receipts_raw(custname: str = Query(...)):
-        """מחזיר את נתוני הקבלות כולל ivnum ו-fncnum לבדיקה."""
-        rows = _wrap(lambda: priority.get_receipts(custname))
-        return {"custname": custname, "count": len(rows), "rows": rows}
+        """מחזיר שורות כרטסת גולמיות (ללא פילטר) לבדיקת IVNUM/FNCNUM."""
+        accounts = _wrap(lambda: priority.list_receivable_accounts(custname))
+        if not accounts:
+            return {"custname": custname, "accounts": [], "error": "no accounts"}
+        acc = accounts[0]["accname"]
+        led = _wrap(lambda: priority._account_ledger(acc))
+        credit_lines = [l for l in led.get("lines", []) if l["credit"] > 0]
+        return {
+            "custname": custname,
+            "account": acc,
+            "total_lines": len(led.get("lines", [])),
+            "credit_lines": len(credit_lines),
+            "sample_credit": credit_lines[:5],
+        }
 
     # ---------------- ניהול (admin) ----------------
     @router.get("/admin/priority/customers", dependencies=[admin_only])
