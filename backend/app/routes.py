@@ -180,21 +180,23 @@ def build_router(priority: PriorityClient, current_user, require_role,
 
     @router.get("/admin/receipts-raw", dependencies=[admin_only])
     def receipts_raw(custname: str = Query(...)):
-        """Debug: navigation ישיר לsubform + כל שדות שורת אשראי."""
+        """Debug: subforms של CUSTOMERS לאיתור קבלות."""
         results = {}
-        # nav property עם $top=1 כדי לראות שדות גולמיים
-        for acc in [custname, custname + "-0"]:
+        for sub in ["CUSTPIV_SUBFORM", "CUSTIV_SUBFORM", "CUSTRINV_SUBFORM",
+                    "CUSTRC_SUBFORM", "CUSTRCIV_SUBFORM", "CUSTTIV_SUBFORM",
+                    "CUSTFNC_SUBFORM", "CUSTBIV_SUBFORM"]:
             try:
-                d = priority._get(
-                    f"ACCOUNTS_RECEIVABLE('{acc}')/ACCFNCITEMS2_SUBFORM",
-                    {"$top": "1"})
+                d = priority._get(f"CUSTOMERS('{custname}')/{sub}",
+                                  {"$top": "2"})
                 rows = d.get("value", [])
                 if rows:
-                    return {"method": f"nav/{acc}", "fields": list(rows[0].keys()),
-                            "row": rows[0]}
-                results[f"nav/{acc}"] = "empty"
+                    results[sub] = {"count": len(rows), "fields": list(rows[0].keys()),
+                                    "sample": rows[0]}
+                else:
+                    results[sub] = "empty"
             except Exception as exc:
-                results[f"nav/{acc}"] = str(exc)[:150]
+                msg = str(exc)[:80]
+                results[sub] = msg
         return results
 
     # ---------------- ניהול (admin) ----------------
