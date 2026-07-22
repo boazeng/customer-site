@@ -180,27 +180,31 @@ def build_router(priority: PriorityClient, current_user, require_role,
 
     @router.get("/admin/receipts-raw", dependencies=[admin_only])
     def receipts_raw(custname: str = Query(...)):
-        """Debug: RINVOICES לאחר פתיחת API."""
+        """Debug: RINVOICES עם וריאנטים שונים + FNCITEMS mapping."""
         results = {}
-        # RINVOICES ללא filter — מה הstructure?
+        # RINVOICES עם $select (אולי מתקן 400)
         try:
-            d = priority._get("RINVOICES", {"$top": "2"})
-            results["RINVOICES_all"] = d.get("value", [])
+            d = priority._get("RINVOICES", {
+                "$select": "IVNUM,IVDATE,TOTPRICE,CUSTNAME", "$top": "2"})
+            results["RINVOICES_select"] = d.get("value", [])
         except Exception as exc:
-            results["RINVOICES_all"] = str(exc)[:200]
-        # RINVOICES עם filter לקוח
-        for cust in [custname, custname.lstrip("Tt")]:
-            try:
-                d = priority._get("RINVOICES", {
-                    "$filter": f"CUSTNAME eq '{cust}'",
-                    "$top": "3",
-                })
-                results[f"RINVOICES_{cust}"] = {
-                    "count": len(d.get("value", [])),
-                    "sample": d.get("value", [])
-                }
-            except Exception as exc:
-                results[f"RINVOICES_{cust}"] = str(exc)[:200]
+            results["RINVOICES_select"] = str(exc)[:200]
+        # RINVOICES key ישיר
+        try:
+            d = priority._get("RINVOICES('RC26110000625')", {})
+            results["RINVOICES_key"] = d
+        except Exception as exc:
+            results["RINVOICES_key"] = str(exc)[:200]
+        # FNCITEMS — mapping FNCNUM→IVNUM
+        try:
+            d = priority._get("FNCITEMS", {
+                "$select": "FNCNUM,IVNUM,FNCDATE,CREDIT,CUSTNAME",
+                "$filter": f"CUSTNAME eq '{custname}'",
+                "$top": "3",
+            })
+            results["FNCITEMS"] = d.get("value", [])
+        except Exception as exc:
+            results["FNCITEMS"] = str(exc)[:200]
         return results
 
     # ---------------- ניהול (admin) ----------------
