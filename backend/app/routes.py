@@ -164,28 +164,31 @@ def build_router(priority: PriorityClient, current_user, require_role,
 
     @router.get("/admin/receipts-raw", dependencies=[admin_only])
     def receipts_raw(custname: str = Query(...)):
-        """Debug: גישה ישירה ל-ACCOUNTS_RECEIVABLE וכל שדות תנועות אשראי."""
+        """Debug: מחפש מסמכי קבלה (RC) ב-INVOICES עבור הלקוח."""
         err1 = err2 = None
-        # ניסיון 1: גישה ישירה במפתח
+        # ניסיון 1: INVOICES עם פילטר CUSTNAME + RC
         try:
-            raw_d = priority._get(f"ACCOUNTS_RECEIVABLE('{custname}')",
-                                  {"$expand": "ACCFNCITEMS2_SUBFORM"})
-            rows = raw_d.get("ACCFNCITEMS2_SUBFORM", []) or []
-            credit_rows = [r for r in rows if float(r.get("CREDIT", 0) or 0) > 0]
-            return {"method": "direct-key", "account": custname,
-                    "total_lines": len(rows), "credit_count": len(credit_rows),
-                    "sample": credit_rows[:2]}
+            d = priority._get("INVOICES", {
+                "$filter": f"CUSTNAME eq '{custname}'",
+                "$select": "IVNUM,IVDATE,TOTPRICE,IVTYPE,CUSTNAME",
+                "$top": "20",
+            })
+            return {"method": "INVOICES", "count": len(d.get("value", [])),
+                    "rows": d.get("value", [])}
         except Exception as exc:
             err1 = str(exc)
-        # ניסיון 2: filter רחב
+        # ניסיון 2: AINVOICES
         try:
-            accs = priority._get("ACCOUNTS_RECEIVABLE",
-                                 {"$select": "ACCNAME", "$top": "10",
-                                  "$filter": f"ACCNAME ge '{custname}'"})
-            return {"method": "broad-filter", "results": accs.get("value", []), "err1": err1}
+            d2 = priority._get("AINVOICES", {
+                "$filter": f"CUSTNAME eq '{custname}'",
+                "$select": "IVNUM,IVDATE,TOTPRICE,IVTYPE",
+                "$top": "5",
+            })
+            return {"method": "AINVOICES", "count": len(d2.get("value", [])),
+                    "sample": d2.get("value", []), "err1": err1}
         except Exception as exc:
             err2 = str(exc)
-        return {"err1": err1, "err2": err2, "custname": custname}
+        return {"err1": err1, "err2": err2}
 
     # ---------------- ניהול (admin) ----------------
     @router.get("/admin/priority/customers", dependencies=[admin_only])
