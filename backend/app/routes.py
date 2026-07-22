@@ -162,33 +162,37 @@ def build_router(priority: PriorityClient, current_user, require_role,
         except Exception as exc:
             raise HTTPException(502, str(exc)) from exc
 
+    @router.get("/admin/test-receipt-pdf", dependencies=[admin_only])
+    def test_receipt_pdf(ivnum: str = Query(...)):
+        """בדיקה: שלח IVNUM ידני ל-WWWSHOWTIV דרך הsidecar."""
+        import os, httpx as _httpx
+        base = os.getenv("PDF_SIDECAR_URL", "http://localhost:3001").rstrip("/")
+        try:
+            r = _httpx.get(f"{base}/invoice-pdf",
+                           params={"ivnum": ivnum, "source": "RECEIPTS"}, timeout=90.0)
+            if r.status_code == 200 and r.content[:4] == b"%PDF":
+                from fastapi.responses import Response as _Resp
+                return _Resp(content=r.content, media_type="application/pdf",
+                             headers={"Content-Disposition": f'inline; filename="receipt-{ivnum}.pdf"'})
+            return {"status": r.status_code, "error": r.json().get("error", r.text[:300])}
+        except Exception as exc:
+            return {"error": str(exc)}
+
     @router.get("/admin/receipts-raw", dependencies=[admin_only])
     def receipts_raw(custname: str = Query(...)):
-        """Debug: מחפש מסמכי קבלה (RC) ב-INVOICES עבור הלקוח."""
-        err1 = err2 = None
-        # ניסיון 1: INVOICES עם פילטר CUSTNAME + RC
-        try:
-            d = priority._get("INVOICES", {
-                "$filter": f"CUSTNAME eq '{custname}'",
-                "$select": "IVNUM,IVDATE,TOTPRICE,IVTYPE,CUSTNAME",
-                "$top": "20",
-            })
-            return {"method": "INVOICES", "count": len(d.get("value", [])),
-                    "rows": d.get("value", [])}
-        except Exception as exc:
-            err1 = str(exc)
-        # ניסיון 2: AINVOICES
-        try:
-            d2 = priority._get("AINVOICES", {
-                "$filter": f"CUSTNAME eq '{custname}'",
-                "$select": "IVNUM,IVDATE,TOTPRICE,IVTYPE",
-                "$top": "5",
-            })
-            return {"method": "AINVOICES", "count": len(d2.get("value", [])),
-                    "sample": d2.get("value", []), "err1": err1}
-        except Exception as exc:
-            err2 = str(exc)
-        return {"err1": err1, "err2": err2}
+        """Debug: מנסה entities שונים למציאת קבלות RC."""
+        results = {}
+        for entity in ["TINVOICES", "RINVOICES", "RCUSTINVOICES", "PAYED", "RECEIPTS"]:
+            try:
+                d = priority._get(entity, {
+                    "$filter": f"CUSTNAME eq '{custname}'",
+                    "$select": "IVNUM,IVDATE,TOTPRICE,IVTYPE",
+                    "$top": "3",
+                })
+                results[entity] = {"count": len(d.get("value", [])), "sample": d.get("value", [])}
+            except Exception as exc:
+                results[entity] = {"error": str(exc)[:120]}
+        return results
 
     # ---------------- ניהול (admin) ----------------
     @router.get("/admin/priority/customers", dependencies=[admin_only])
