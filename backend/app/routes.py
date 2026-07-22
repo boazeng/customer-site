@@ -164,26 +164,26 @@ def build_router(priority: PriorityClient, current_user, require_role,
 
     @router.get("/admin/receipts-raw", dependencies=[admin_only])
     def receipts_raw(custname: str = Query(...)):
-        """Debug: כל השדות הגולמיים של תנועות אשראי מ-ACCFNCITEMS2_SUBFORM."""
+        """Debug: גישה ישירה ל-ACCOUNTS_RECEIVABLE וכל שדות תנועות אשראי."""
+        # ניסיון 1: גישה ישירה בMפתח
         try:
-            hi = str(int(custname) + 1)
-        except ValueError:
-            hi = custname + "￿"
-        accs = _wrap(lambda: priority._get("ACCOUNTS_RECEIVABLE", {
-            "$filter": f"ACCNAME ge '{custname}' and ACCNAME lt '{hi}'",
-            "$select": "ACCNAME", "$top": "5",
-        }))
-        accounts = [r["ACCNAME"] for r in accs.get("value", []) if r.get("ACCNAME")]
-        if not accounts:
-            return {"error": "no accounts", "custname": custname}
-        acc = accounts[0]
-        raw_d = _wrap(lambda: priority._get(f"ACCOUNTS_RECEIVABLE('{acc}')",
-                                            {"$expand": "ACCFNCITEMS2_SUBFORM"}))
-        rows = raw_d.get("ACCFNCITEMS2_SUBFORM", []) or []
-        credit_rows = [r for r in rows if float(r.get("CREDIT", 0) or 0) > 0]
-        return {"account": acc, "total": len(rows),
-                "credit_count": len(credit_rows),
-                "sample": credit_rows[:2]}
+            raw_d = priority._get(f"ACCOUNTS_RECEIVABLE('{custname}')",
+                                  {"$expand": "ACCFNCITEMS2_SUBFORM"})
+            rows = raw_d.get("ACCFNCITEMS2_SUBFORM", []) or []
+            credit_rows = [r for r in rows if float(r.get("CREDIT", 0) or 0) > 0]
+            return {"method": "direct-key", "account": custname,
+                    "total_lines": len(rows), "credit_count": len(credit_rows),
+                    "sample": credit_rows[:2]}
+        except Exception as e1:
+            pass
+        # ניסיון 2: חיפוש רחב ללא filter
+        try:
+            accs = priority._get("ACCOUNTS_RECEIVABLE",
+                                 {"$select": "ACCNAME", "$top": "10",
+                                  "$filter": f"substringof('{custname}',ACCNAME)"})
+            return {"method": "substringof", "results": accs.get("value", []), "error1": str(e1)}
+        except Exception as e2:
+            return {"error1": str(e1), "error2": str(e2), "custname": custname}
 
     # ---------------- ניהול (admin) ----------------
     @router.get("/admin/priority/customers", dependencies=[admin_only])
