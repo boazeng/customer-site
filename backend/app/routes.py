@@ -164,28 +164,26 @@ def build_router(priority: PriorityClient, current_user, require_role,
 
     @router.get("/admin/receipts-raw", dependencies=[admin_only])
     def receipts_raw(custname: str = Query(...)):
-        """Debug: raw ACCOUNTS_RECEIVABLE query + first 3 credit lines."""
+        """Debug: כל השדות הגולמיים של תנועות אשראי מ-ACCFNCITEMS2_SUBFORM."""
         try:
             hi = str(int(custname) + 1)
         except ValueError:
             hi = custname + "￿"
-        raw = _wrap(lambda: priority._get("ACCOUNTS_RECEIVABLE", {
+        accs = _wrap(lambda: priority._get("ACCOUNTS_RECEIVABLE", {
             "$filter": f"ACCNAME ge '{custname}' and ACCNAME lt '{hi}'",
-            "$select": "ACCNAME,ACCDES,BALANCE1",
-            "$top": "20",
+            "$select": "ACCNAME", "$top": "5",
         }))
-        accounts = [r.get("ACCNAME") for r in raw.get("value", [])]
+        accounts = [r["ACCNAME"] for r in accs.get("value", []) if r.get("ACCNAME")]
         if not accounts:
-            return {"custname": custname, "hi": hi, "accounts": [], "raw_count": len(raw.get("value", []))}
-        led = _wrap(lambda: priority._account_ledger(accounts[0]))
-        credit_lines = [l for l in led.get("lines", []) if l["credit"] > 0]
-        return {
-            "custname": custname,
-            "accounts": accounts,
-            "total_lines": len(led.get("lines", [])),
-            "credit_count": len(credit_lines),
-            "sample": credit_lines[:3],
-        }
+            return {"error": "no accounts", "custname": custname}
+        acc = accounts[0]
+        raw_d = _wrap(lambda: priority._get(f"ACCOUNTS_RECEIVABLE('{acc}')",
+                                            {"$expand": "ACCFNCITEMS2_SUBFORM"}))
+        rows = raw_d.get("ACCFNCITEMS2_SUBFORM", []) or []
+        credit_rows = [r for r in rows if float(r.get("CREDIT", 0) or 0) > 0]
+        return {"account": acc, "total": len(rows),
+                "credit_count": len(credit_rows),
+                "sample": credit_rows[:2]}
 
     # ---------------- ניהול (admin) ----------------
     @router.get("/admin/priority/customers", dependencies=[admin_only])
