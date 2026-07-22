@@ -180,33 +180,28 @@ def build_router(priority: PriorityClient, current_user, require_role,
 
     @router.get("/admin/receipts-raw", dependencies=[admin_only])
     def receipts_raw(custname: str = Query(...)):
-        """Debug: מחפש קבלות RC ב-TINVOICES וריאנטים."""
+        """Debug: navigation property ישיר לsubform + כל שדות שורות אשראי."""
         results = {}
-        numeric = custname.lstrip("TtAa")
-        # TINVOICES ללא filter — מה קיים בכלל?
-        try:
-            d = priority._get("TINVOICES", {"$top": "3",
-                                            "$select": "IVNUM,IVDATE,TOTPRICE,CUSTNAME"})
-            results["TINVOICES_all"] = d.get("value", [])
-        except Exception as exc:
-            results["TINVOICES_all"] = str(exc)[:120]
-        # TINVOICES עם וריאנטים של custname
-        for cust in [custname, numeric]:
+        # Navigation property — מסלול ישיר לsubform, מגביל ל-2 שורות
+        for acc in [custname, custname.lstrip("Tt")]:
             try:
-                d = priority._get("TINVOICES", {
-                    "$filter": f"CUSTNAME eq '{cust}'",
-                    "$select": "IVNUM,IVDATE,TOTPRICE,CUSTNAME", "$top": "5"})
-                results[f"TINVOICES_{cust}"] = {"count": len(d.get("value", [])),
-                                                "sample": d.get("value", [])}
+                d = priority._get(
+                    f"ACCOUNTS_RECEIVABLE('{acc}')/ACCFNCITEMS2_SUBFORM",
+                    {"$top": "2"})
+                rows = d.get("value", [])
+                if rows:
+                    return {"method": f"nav/{acc}", "rows": rows}
+                results[f"nav/{acc}"] = "empty"
             except Exception as exc:
-                results[f"TINVOICES_{cust}"] = str(exc)[:120]
-        # RINVOICES ללא filter
-        try:
-            d = priority._get("RINVOICES", {"$top": "3",
-                                            "$select": "IVNUM,IVDATE,TOTPRICE,CUSTNAME"})
-            results["RINVOICES_all"] = d.get("value", [])
-        except Exception as exc:
-            results["RINVOICES_all"] = str(exc)[:120]
+                results[f"nav/{acc}"] = str(exc)[:150]
+        # CUSTOMERS subforms — אולי יש שם קבלות
+        for sub in ["CUSTIV_SUBFORM", "CUSTPIV_SUBFORM", "CUSTRC_SUBFORM"]:
+            try:
+                d = priority._get(f"CUSTOMERS('{custname}')/{sub}", {"$top": "2"})
+                rows = d.get("value", [])
+                results[sub] = rows if rows else "empty"
+            except Exception as exc:
+                results[sub] = str(exc)[:100]
         return results
 
     # ---------------- ניהול (admin) ----------------
