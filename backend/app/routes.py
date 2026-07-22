@@ -180,28 +180,27 @@ def build_router(priority: PriorityClient, current_user, require_role,
 
     @router.get("/admin/receipts-raw", dependencies=[admin_only])
     def receipts_raw(custname: str = Query(...)):
-        """Debug: navigation property ישיר לsubform + כל שדות שורות אשראי."""
+        """Debug: RINVOICES לאחר פתיחת API."""
         results = {}
-        # Navigation property — מסלול ישיר לsubform, מגביל ל-2 שורות
-        for acc in [custname, custname.lstrip("Tt")]:
+        # RINVOICES ללא filter — מה הstructure?
+        try:
+            d = priority._get("RINVOICES", {"$top": "2"})
+            results["RINVOICES_all"] = d.get("value", [])
+        except Exception as exc:
+            results["RINVOICES_all"] = str(exc)[:200]
+        # RINVOICES עם filter לקוח
+        for cust in [custname, custname.lstrip("Tt")]:
             try:
-                d = priority._get(
-                    f"ACCOUNTS_RECEIVABLE('{acc}')/ACCFNCITEMS2_SUBFORM",
-                    {"$top": "2"})
-                rows = d.get("value", [])
-                if rows:
-                    return {"method": f"nav/{acc}", "rows": rows}
-                results[f"nav/{acc}"] = "empty"
+                d = priority._get("RINVOICES", {
+                    "$filter": f"CUSTNAME eq '{cust}'",
+                    "$top": "3",
+                })
+                results[f"RINVOICES_{cust}"] = {
+                    "count": len(d.get("value", [])),
+                    "sample": d.get("value", [])
+                }
             except Exception as exc:
-                results[f"nav/{acc}"] = str(exc)[:150]
-        # CUSTOMERS subforms — אולי יש שם קבלות
-        for sub in ["CUSTIV_SUBFORM", "CUSTPIV_SUBFORM", "CUSTRC_SUBFORM"]:
-            try:
-                d = priority._get(f"CUSTOMERS('{custname}')/{sub}", {"$top": "2"})
-                rows = d.get("value", [])
-                results[sub] = rows if rows else "empty"
-            except Exception as exc:
-                results[sub] = str(exc)[:100]
+                results[f"RINVOICES_{cust}"] = str(exc)[:200]
         return results
 
     # ---------------- ניהול (admin) ----------------
