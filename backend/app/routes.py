@@ -165,7 +165,8 @@ def build_router(priority: PriorityClient, current_user, require_role,
     @router.get("/admin/receipts-raw", dependencies=[admin_only])
     def receipts_raw(custname: str = Query(...)):
         """Debug: גישה ישירה ל-ACCOUNTS_RECEIVABLE וכל שדות תנועות אשראי."""
-        # ניסיון 1: גישה ישירה בMפתח
+        err1 = err2 = None
+        # ניסיון 1: גישה ישירה במפתח
         try:
             raw_d = priority._get(f"ACCOUNTS_RECEIVABLE('{custname}')",
                                   {"$expand": "ACCFNCITEMS2_SUBFORM"})
@@ -174,16 +175,17 @@ def build_router(priority: PriorityClient, current_user, require_role,
             return {"method": "direct-key", "account": custname,
                     "total_lines": len(rows), "credit_count": len(credit_rows),
                     "sample": credit_rows[:2]}
-        except Exception as e1:
-            pass
-        # ניסיון 2: חיפוש רחב ללא filter
+        except Exception as exc:
+            err1 = str(exc)
+        # ניסיון 2: filter רחב
         try:
             accs = priority._get("ACCOUNTS_RECEIVABLE",
                                  {"$select": "ACCNAME", "$top": "10",
-                                  "$filter": f"substringof('{custname}',ACCNAME)"})
-            return {"method": "substringof", "results": accs.get("value", []), "error1": str(e1)}
-        except Exception as e2:
-            return {"error1": str(e1), "error2": str(e2), "custname": custname}
+                                  "$filter": f"ACCNAME ge '{custname}'"})
+            return {"method": "broad-filter", "results": accs.get("value", []), "err1": err1}
+        except Exception as exc:
+            err2 = str(exc)
+        return {"err1": err1, "err2": err2, "custname": custname}
 
     # ---------------- ניהול (admin) ----------------
     @router.get("/admin/priority/customers", dependencies=[admin_only])
