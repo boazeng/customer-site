@@ -180,31 +180,21 @@ def build_router(priority: PriorityClient, current_user, require_role,
 
     @router.get("/admin/receipts-raw", dependencies=[admin_only])
     def receipts_raw(custname: str = Query(...)):
-        """Debug: RINVOICES עם וריאנטים שונים + FNCITEMS mapping."""
+        """Debug: navigation ישיר לsubform + כל שדות שורת אשראי."""
         results = {}
-        # RINVOICES עם $select (אולי מתקן 400)
-        try:
-            d = priority._get("RINVOICES", {
-                "$select": "IVNUM,IVDATE,TOTPRICE,CUSTNAME", "$top": "2"})
-            results["RINVOICES_select"] = d.get("value", [])
-        except Exception as exc:
-            results["RINVOICES_select"] = str(exc)[:200]
-        # RINVOICES key ישיר
-        try:
-            d = priority._get("RINVOICES('RC26110000625')", {})
-            results["RINVOICES_key"] = d
-        except Exception as exc:
-            results["RINVOICES_key"] = str(exc)[:200]
-        # FNCITEMS — mapping FNCNUM→IVNUM
-        try:
-            d = priority._get("FNCITEMS", {
-                "$select": "FNCNUM,IVNUM,FNCDATE,CREDIT,CUSTNAME",
-                "$filter": f"CUSTNAME eq '{custname}'",
-                "$top": "3",
-            })
-            results["FNCITEMS"] = d.get("value", [])
-        except Exception as exc:
-            results["FNCITEMS"] = str(exc)[:200]
+        # nav property עם $top=1 כדי לראות שדות גולמיים
+        for acc in [custname, custname + "-0"]:
+            try:
+                d = priority._get(
+                    f"ACCOUNTS_RECEIVABLE('{acc}')/ACCFNCITEMS2_SUBFORM",
+                    {"$top": "1"})
+                rows = d.get("value", [])
+                if rows:
+                    return {"method": f"nav/{acc}", "fields": list(rows[0].keys()),
+                            "row": rows[0]}
+                results[f"nav/{acc}"] = "empty"
+            except Exception as exc:
+                results[f"nav/{acc}"] = str(exc)[:150]
         return results
 
     # ---------------- ניהול (admin) ----------------
