@@ -180,18 +180,33 @@ def build_router(priority: PriorityClient, current_user, require_role,
 
     @router.get("/admin/receipts-raw", dependencies=[admin_only])
     def receipts_raw(custname: str = Query(...)):
-        """Debug: מנסה entities שונים למציאת קבלות RC."""
+        """Debug: מחפש קבלות RC ב-TINVOICES וריאנטים."""
         results = {}
-        for entity in ["TINVOICES", "RINVOICES", "RCUSTINVOICES", "PAYED", "RECEIPTS"]:
+        numeric = custname.lstrip("TtAa")
+        # TINVOICES ללא filter — מה קיים בכלל?
+        try:
+            d = priority._get("TINVOICES", {"$top": "3",
+                                            "$select": "IVNUM,IVDATE,TOTPRICE,CUSTNAME"})
+            results["TINVOICES_all"] = d.get("value", [])
+        except Exception as exc:
+            results["TINVOICES_all"] = str(exc)[:120]
+        # TINVOICES עם וריאנטים של custname
+        for cust in [custname, numeric]:
             try:
-                d = priority._get(entity, {
-                    "$filter": f"CUSTNAME eq '{custname}'",
-                    "$select": "IVNUM,IVDATE,TOTPRICE,IVTYPE",
-                    "$top": "3",
-                })
-                results[entity] = {"count": len(d.get("value", [])), "sample": d.get("value", [])}
+                d = priority._get("TINVOICES", {
+                    "$filter": f"CUSTNAME eq '{cust}'",
+                    "$select": "IVNUM,IVDATE,TOTPRICE,CUSTNAME", "$top": "5"})
+                results[f"TINVOICES_{cust}"] = {"count": len(d.get("value", [])),
+                                                "sample": d.get("value", [])}
             except Exception as exc:
-                results[entity] = {"error": str(exc)[:120]}
+                results[f"TINVOICES_{cust}"] = str(exc)[:120]
+        # RINVOICES ללא filter
+        try:
+            d = priority._get("RINVOICES", {"$top": "3",
+                                            "$select": "IVNUM,IVDATE,TOTPRICE,CUSTNAME"})
+            results["RINVOICES_all"] = d.get("value", [])
+        except Exception as exc:
+            results["RINVOICES_all"] = str(exc)[:120]
         return results
 
     # ---------------- ניהול (admin) ----------------
